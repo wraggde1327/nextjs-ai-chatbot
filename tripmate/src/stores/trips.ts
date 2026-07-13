@@ -286,9 +286,15 @@ export const useTripsStore = defineStore('trips', () => {
     poll.options.forEach((opt, i) => { opt.votes = opt.votes.filter(v => v !== userId); if (i === optionIndex) opt.votes.push(userId) })
   }
 
-  function updateExpense(expenseId: string, updates: Partial<Pick<Expense, 'title' | 'amount' | 'category' | 'type' | 'splitMode' | 'splits'>>) {
+  function updateExpense(expenseId: string, updates: Partial<Pick<Expense, 'title' | 'amount' | 'category' | 'type' | 'splitMode' | 'splits' | 'source'>>) {
     const exp = expenses.value.find(e => e.id === expenseId)
     if (exp) Object.assign(exp, updates)
+  }
+
+  function spendFromFund(tripId: string, amount: number) {
+    if (fund.value && fund.value.tripId === tripId) {
+      fund.value.totalSpent += amount
+    }
   }
 
   function updateEvent(eventId: string, updates: Partial<Pick<TripEvent, 'title' | 'date' | 'time' | 'location'>>) {
@@ -340,7 +346,7 @@ export const useTripsStore = defineStore('trips', () => {
     activeTrips, archivedTrips,
     getUserName, getActiveMembers, getLeftMembers, getWalletForUser,
     removeMember, restoreMember, addMember,
-    updateTripBudget, createFund, updateContribution,
+    updateTripBudget, createFund, updateContribution, spendFromFund,
     getTripExpenses, getSharedExpenses, getPersonalExpenses, getDeposits,
     getTripMessages, getTripEvents, getUpcomingEvents, getEventsForDate,
     getTripTasks, getTaskSections, getTripPolls, getTripLinks, getTripFund,

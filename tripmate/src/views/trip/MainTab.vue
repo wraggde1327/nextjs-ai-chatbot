@@ -88,6 +88,7 @@
                 </div>
                 <div class="compact-meta">
                   {{ store.getUserName(msg.createdBy) }} · {{ getExpenseSplitText(getExpense(msg.referenceId)!) }}
+                  <span v-if="getExpense(msg.referenceId)!.source === 'fund'" class="from-fund-tag">из фонда</span>
                   <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
                 </div>
               </div>
@@ -191,6 +192,9 @@
           <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddTask">
             <ion-icon :icon="checkmarkCircleOutline" slot="start" /> Задача
           </ion-button>
+          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddLink">
+            <ion-icon :icon="linkOutline" slot="start" /> Ссылка
+          </ion-button>
         </div>
       </ion-toolbar>
     </ion-footer>
@@ -215,12 +219,16 @@
             <ion-select-option value="other">Другое</ion-select-option>
           </ion-select>
         </ion-item>
-        <ion-item>
-          <ion-select v-model="expenseType" label="Тип" label-placement="floating" interface="action-sheet">
-            <ion-select-option value="shared">Общая</ion-select-option>
-            <ion-select-option value="personal">Личная</ion-select-option>
-          </ion-select>
-        </ion-item>
+        <div class="section-header" style="margin-top:12px">Тип траты</div>
+        <ion-segment v-model="expenseType" class="type-segment">
+          <ion-segment-button value="shared"><ion-label>Общая</ion-label></ion-segment-button>
+          <ion-segment-button value="personal"><ion-label>Личная</ion-label></ion-segment-button>
+        </ion-segment>
+        <div v-if="expenseType === 'shared' && hasFund" class="fund-toggle-row">
+          <ion-checkbox :checked="expenseFromFund" @ion-change="expenseFromFund = $event.detail.checked" />
+          <span class="fund-toggle-label">Списать из общего фонда</span>
+          <span v-if="fundBalance > 0" class="fund-toggle-hint num">{{ fundBalance.toLocaleString() }} ₽</span>
+        </div>
         <template v-if="expenseType === 'shared'">
           <div class="section-header">Делим на</div>
           <ion-segment v-model="expenseSplitMode" class="split-segment">
@@ -345,6 +353,27 @@
       </ion-content>
     </ion-modal>
 
+    <!-- ========== Link Modal ========== -->
+    <ion-modal :is-open="showLinkModal" @did-dismiss="showLinkModal = false">
+      <ion-header><ion-toolbar>
+        <ion-buttons slot="start"><ion-button @click="showLinkModal = false">Отмена</ion-button></ion-buttons>
+        <ion-title>Новая ссылка</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveLink" :disabled="!linkUrl.trim()" strong>Добавить</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item><ion-input v-model="linkUrl" label="URL" label-placement="floating" placeholder="https://..." /></ion-item>
+        <ion-item><ion-input v-model="linkTitle" label="Название" label-placement="floating" placeholder="Отель, ресторан..." /></ion-item>
+        <ion-item>
+          <ion-select v-model="linkCategory" label="Категория" label-placement="floating" interface="action-sheet">
+            <ion-select-option value="Жильё">Жильё</ion-select-option>
+            <ion-select-option value="Еда">Еда</ion-select-option>
+            <ion-select-option value="Что посмотреть">Что посмотреть</ion-select-option>
+            <ion-select-option value="Другое">Другое</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-content>
+    </ion-modal>
+
     <!-- Members Sheet -->
     <ion-modal :is-open="showMembersSheet" @did-dismiss="showMembersSheet = false" :initial-breakpoint="0.5" :breakpoints="[0, 0.5, 0.85]">
       <ion-header><ion-toolbar>
@@ -407,6 +436,7 @@ import {
   calendarOutline, walletOutline, checkmarkCircleOutline, checkmarkCircle,
   swapHorizontalOutline, cashOutline, statsChartOutline, ellipseOutline,
   bedOutline, carOutline, restaurantOutline, ticketOutline, bagOutline, cubeOutline,
+  linkOutline,
 } from 'ionicons/icons'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
@@ -481,6 +511,20 @@ const expenseSplitMode = ref('equal_all')
 const selectedMembers = ref<string[]>([])
 const customAmounts = reactive<Record<string, number>>({})
 const customTotal = computed(() => Object.values(customAmounts).reduce((s, v) => s + (v || 0), 0))
+const expenseFromFund = ref(false)
+const hasFund = computed(() => {
+  const f = store.getTripFund(tripId.value)
+  return !!f
+})
+const fundBalance = computed(() => {
+  const f = store.getTripFund(tripId.value)
+  return f ? f.totalCollected - f.totalSpent : 0
+})
+
+const showLinkModal = ref(false)
+const linkUrl = ref('')
+const linkTitle = ref('')
+const linkCategory = ref('Другое')
 
 const showEventModal = ref(false)
 const editingEventId = ref<string | null>(null)
@@ -645,6 +689,7 @@ function confirmDelete(action: () => void) {
 function openEditExpense(exp: Expense) {
   editingExpenseId.value = exp.id; expenseTitle.value = exp.title; expenseAmount.value = exp.amount
   expenseCategory.value = exp.category; expenseType.value = exp.type
+  expenseFromFund.value = exp.source === 'fund'
   Object.keys(customAmounts).forEach(k => delete customAmounts[k])
   if (exp.type === 'personal') { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
   else if (exp.splitMode === 'equal' && exp.splits.length === activeMembers.value.length) { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
@@ -659,10 +704,12 @@ function openEditTask(task: { id: string; title: string; section: string; assign
 }
 
 function sendMessage() { const text = newMessage.value.trim(); if (!text) return; store.addMessage(tripId.value, text, currentUserId.value); newMessage.value = ''; showActions.value = false; scrollToBottom() }
-function openAddExpense() { showActions.value = false; editingExpenseId.value = null; expenseTitle.value = ''; expenseAmount.value = 0; expenseCategory.value = 'food'; expenseType.value = 'shared'; expenseSplitMode.value = 'equal_all'; selectedMembers.value = []; Object.keys(customAmounts).forEach(k => delete customAmounts[k]); showExpenseModal.value = true }
+function openAddExpense() { showActions.value = false; editingExpenseId.value = null; expenseTitle.value = ''; expenseAmount.value = 0; expenseCategory.value = 'food'; expenseType.value = 'shared'; expenseSplitMode.value = 'equal_all'; selectedMembers.value = []; Object.keys(customAmounts).forEach(k => delete customAmounts[k]); expenseFromFund.value = false; showExpenseModal.value = true }
 function openAddEvent() { showActions.value = false; editingEventId.value = null; eventTitle.value = ''; eventDate.value = ''; eventTime.value = ''; eventLocation.value = ''; showEventModal.value = true }
 function openAddPoll() { showActions.value = false; pollQuestion.value = ''; pollOptions.value = ['', '']; showPollModal.value = true }
 function openAddTask() { showActions.value = false; editingTaskId.value = null; taskTitle.value = ''; taskSection.value = sections.value[0] || 'До поездки'; taskAssignee.value = ''; showTaskModal.value = true }
+function openAddLink() { showActions.value = false; linkUrl.value = ''; linkTitle.value = ''; linkCategory.value = 'Другое'; showLinkModal.value = true }
+function saveLink() { if (!linkUrl.value.trim()) return; store.addLink(tripId.value, linkUrl.value, linkTitle.value, linkCategory.value, currentUserId.value); showLinkModal.value = false }
 
 function saveExpense() {
   if (!expenseTitle.value || !expenseAmount.value) return
@@ -677,8 +724,12 @@ function saveExpense() {
     if (allEqualToAvg) { splitMode = sel.length === members.length ? 'equal' : 'selected'; splits = sel.map(uid => ({ userId: uid, amount: perPerson })) }
     else { splitMode = 'custom'; splits = sel.filter(uid => (customAmounts[uid] || 0) > 0).map(uid => ({ userId: uid, amount: customAmounts[uid] || 0 })) }
   } else { splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) })) }
-  if (editingExpenseId.value) { store.updateExpense(editingExpenseId.value, { title: expenseTitle.value, amount: expenseAmount.value, category: expenseCategory.value as any, type: expenseType.value as any, splitMode, splits }) }
-  else { store.addExpense({ tripId: tripId.value, title: expenseTitle.value, amount: expenseAmount.value, currency: '₽', category: expenseCategory.value as any, type: expenseType.value as any, splitMode, source: 'personal_payment', paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }], splits, createdBy: currentUserId.value }) }
+  const source = (expenseFromFund.value && !isPersonal) ? 'fund' as const : 'personal_payment' as const
+  if (editingExpenseId.value) { store.updateExpense(editingExpenseId.value, { title: expenseTitle.value, amount: expenseAmount.value, category: expenseCategory.value as any, type: expenseType.value as any, splitMode, splits, source }) }
+  else {
+    store.addExpense({ tripId: tripId.value, title: expenseTitle.value, amount: expenseAmount.value, currency: '₽', category: expenseCategory.value as any, type: expenseType.value as any, splitMode, source, paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }], splits, createdBy: currentUserId.value })
+    if (source === 'fund') store.spendFromFund(tripId.value, expenseAmount.value)
+  }
   showExpenseModal.value = false; scrollToBottom()
 }
 
@@ -737,6 +788,7 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 .compact-amount { font-size: 15px; font-weight: 700; color: var(--color-accent); flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .compact-meta { font-size: 12px; color: var(--color-text-3); margin-top: 3px; padding-left: 24px; }
 .compact-time { float: right; }
+.from-fund-tag { display: inline-block; background: var(--color-accent-bg); color: var(--color-accent); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
 .task-done { text-decoration: line-through; opacity: 0.5; }
 
 .poll-options { margin: 6px 0 4px; }
@@ -752,6 +804,10 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 .plus-btn { --color: var(--color-accent); font-size: 24px; }
 .quick-actions { display: flex; gap: 6px; padding: 6px 12px; overflow-x: auto; }
 
+.type-segment { margin: 0 0 8px; }
+.fund-toggle-row { display: flex; align-items: center; gap: 10px; padding: 10px 16px; margin: 4px 0 8px; background: var(--color-accent-bg); border-radius: 10px; }
+.fund-toggle-label { flex: 1; font-size: 15px; color: var(--color-text-1); }
+.fund-toggle-hint { font-size: 12px; color: var(--color-accent); font-weight: 700; }
 .split-segment { margin: 8px 0; }
 .participants-list { margin: 8px 0; }
 .split-member-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px; min-height: 44px; }
