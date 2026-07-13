@@ -18,11 +18,10 @@
     <ion-content ref="contentRef" class="chat-content">
       <div class="chat-messages">
         <template v-for="msg in chatMessages" :key="msg.id">
-          <!-- System -->
           <div v-if="msg.type === 'system'" class="card-system">{{ msg.text }}</div>
 
-          <!-- Expense card — compact -->
-          <div v-else-if="msg.type === 'expense' && getExpense(msg.referenceId)" class="chat-card-wrapper">
+          <!-- Expense card -->
+          <div v-else-if="msg.type === 'expense' && getExpense(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
             <div class="compact-card expense-card">
               <div class="compact-row">
                 <span class="compact-icon">💰</span>
@@ -36,8 +35,8 @@
             </div>
           </div>
 
-          <!-- Event card — compact -->
-          <div v-else-if="msg.type === 'event' && getEvent(msg.referenceId)" class="chat-card-wrapper">
+          <!-- Event card -->
+          <div v-else-if="msg.type === 'event' && getEvent(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
             <div class="compact-card event-card">
               <div class="compact-row">
                 <span class="compact-icon">📅</span>
@@ -53,10 +52,10 @@
             </div>
           </div>
 
-          <!-- Poll card — compact -->
+          <!-- Poll card -->
           <div v-else-if="msg.type === 'poll' && getPoll(msg.referenceId)" class="chat-card-wrapper">
             <div class="compact-card poll-card">
-              <div class="compact-row">
+              <div class="compact-row" @click="openCardActions(msg)">
                 <span class="compact-icon">📊</span>
                 <span class="compact-title">{{ getPoll(msg.referenceId)!.question }}</span>
               </div>
@@ -79,12 +78,12 @@
             </div>
           </div>
 
-          <!-- Task card — compact -->
-          <div v-else-if="msg.type === 'task' && getTask(msg.referenceId)" class="chat-card-wrapper">
+          <!-- Task card -->
+          <div v-else-if="msg.type === 'task' && getTask(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
             <div class="compact-card task-card">
               <div class="compact-row">
-                <span class="compact-icon">✅</span>
-                <span class="compact-title">{{ getTask(msg.referenceId)!.title }}</span>
+                <span class="compact-icon">{{ getTask(msg.referenceId)!.isCompleted ? '✅' : '☑️' }}</span>
+                <span class="compact-title" :class="{ 'task-done': getTask(msg.referenceId)!.isCompleted }">{{ getTask(msg.referenceId)!.title }}</span>
               </div>
               <div class="compact-meta">
                 {{ store.getUserName(msg.createdBy) }}
@@ -145,7 +144,7 @@
       <ion-header>
         <ion-toolbar>
           <ion-buttons slot="start"><ion-button @click="showExpenseModal = false">Отмена</ion-button></ion-buttons>
-          <ion-title>Новая трата</ion-title>
+          <ion-title>{{ editingExpenseId ? 'Редактировать' : 'Новая трата' }}</ion-title>
           <ion-buttons slot="end"><ion-button @click="saveExpense" :disabled="!expenseTitle || !expenseAmount" strong>Сохранить</ion-button></ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -175,22 +174,41 @@
 
         <template v-if="expenseType === 'shared'">
           <div class="section-header">Делим на</div>
-          <ion-item>
-            <ion-select v-model="expenseSplitMode" label="Режим" label-placement="floating" interface="action-sheet">
-              <ion-select-option value="equal_all">Поровну на всех</ion-select-option>
-              <ion-select-option value="equal_selected">Выбрать участников</ion-select-option>
-              <ion-select-option value="custom">Свои суммы</ion-select-option>
-            </ion-select>
-          </ion-item>
+          <ion-segment v-model="expenseSplitMode" class="split-segment">
+            <ion-segment-button value="equal_all">
+              <ion-label>Все</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="equal_selected">
+              <ion-label>Выбрать</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="custom">
+              <ion-label>Суммы</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+
+          <!-- Preview for equal_all -->
+          <div v-if="expenseSplitMode === 'equal_all' && expenseAmount && trip" class="split-preview">
+            👥 {{ trip.members.length }} чел. · по {{ Math.round(expenseAmount / trip.members.length).toLocaleString() }} ₽
+          </div>
 
           <!-- Select participants -->
           <div v-if="expenseSplitMode === 'equal_selected'" class="participants-list">
-            <ion-item v-for="m in trip?.members" :key="m.userId" lines="none">
-              <ion-checkbox slot="start" :checked="selectedMembers.includes(m.userId)" @ion-change="toggleMember(m.userId)" />
+            <ion-item v-for="m in trip?.members" :key="m.userId" lines="none" class="participant-item">
+              <ion-checkbox
+                slot="start"
+                :checked="selectedMembers.includes(m.userId)"
+                @ion-change="toggleMember(m.userId)"
+              />
               <ion-label>{{ store.getUserName(m.userId) }}</ion-label>
+              <ion-note v-if="selectedMembers.includes(m.userId) && selectedMembers.length && expenseAmount" slot="end" color="primary">
+                {{ Math.round(expenseAmount / selectedMembers.length).toLocaleString() }} ₽
+              </ion-note>
             </ion-item>
             <div v-if="selectedMembers.length && expenseAmount" class="split-preview">
-              По {{ Math.round(expenseAmount / selectedMembers.length).toLocaleString() }} ₽ на каждого ({{ selectedMembers.length }} чел.)
+              👥 {{ selectedMembers.length }} чел. · по {{ Math.round(expenseAmount / selectedMembers.length).toLocaleString() }} ₽
+            </div>
+            <div v-else-if="!selectedMembers.length" class="split-hint">
+              Выберите участников
             </div>
           </div>
 
@@ -221,7 +239,7 @@
       <ion-header>
         <ion-toolbar>
           <ion-buttons slot="start"><ion-button @click="showEventModal = false">Отмена</ion-button></ion-buttons>
-          <ion-title>Новое событие</ion-title>
+          <ion-title>{{ editingEventId ? 'Редактировать' : 'Новое событие' }}</ion-title>
           <ion-buttons slot="end"><ion-button @click="saveEvent" :disabled="!eventTitle || !eventDate || !eventTime" strong>Сохранить</ion-button></ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -270,8 +288,8 @@
       <ion-header>
         <ion-toolbar>
           <ion-buttons slot="start"><ion-button @click="showTaskModal = false">Отмена</ion-button></ion-buttons>
-          <ion-title>Новая задача</ion-title>
-          <ion-buttons slot="end"><ion-button @click="saveTask" :disabled="!taskTitle" strong>Создать</ion-button></ion-buttons>
+          <ion-title>{{ editingTaskId ? 'Редактировать' : 'Новая задача' }}</ion-title>
+          <ion-buttons slot="end"><ion-button @click="saveTask" :disabled="!taskTitle" strong>{{ editingTaskId ? 'Сохранить' : 'Создать' }}</ion-button></ion-buttons>
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
@@ -293,6 +311,23 @@
         </ion-item>
       </ion-content>
     </ion-modal>
+
+    <!-- ========== Action Sheet ========== -->
+    <ion-action-sheet
+      :is-open="showActionSheet"
+      :header="actionSheetHeader"
+      :buttons="actionSheetButtons"
+      @did-dismiss="showActionSheet = false"
+    />
+
+    <!-- ========== Delete Confirm ========== -->
+    <ion-alert
+      :is-open="showDeleteConfirm"
+      header="Удалить?"
+      message="Это действие нельзя отменить."
+      :buttons="deleteConfirmButtons"
+      @did-dismiss="showDeleteConfirm = false"
+    />
   </ion-page>
 </template>
 
@@ -303,11 +338,12 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonFooter,
   IonButtons, IonButton, IonBackButton, IonIcon, IonInput, IonBadge,
   IonModal, IonItem, IonSelect, IonSelectOption, IonCheckbox, IonLabel, IonNote,
+  IonSegment, IonSegmentButton, IonActionSheet, IonAlert,
 } from '@ionic/vue'
 import { addCircleOutline, closeCircleOutline, sendOutline, peopleOutline } from 'ionicons/icons'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
-import type { Expense } from '../../types'
+import type { Expense, ChatMessage } from '../../types'
 
 const route = useRoute()
 const store = useTripsStore()
@@ -326,8 +362,9 @@ const contentRef = ref()
 const newMessage = ref('')
 const showActions = ref(false)
 
-// Expense
+// Expense form
 const showExpenseModal = ref(false)
+const editingExpenseId = ref<string | null>(null)
 const expenseTitle = ref('')
 const expenseAmount = ref<number>(0)
 const expenseCategory = ref('food')
@@ -335,28 +372,37 @@ const expenseType = ref('shared')
 const expenseSplitMode = ref('equal_all')
 const selectedMembers = ref<string[]>([])
 const customAmounts = reactive<Record<string, number>>({})
-
 const customTotal = computed(() => Object.values(customAmounts).reduce((s, v) => s + (v || 0), 0))
 
-// Event
+// Event form
 const showEventModal = ref(false)
+const editingEventId = ref<string | null>(null)
 const eventTitle = ref('')
 const eventDate = ref('')
 const eventTime = ref('')
 const eventLocation = ref('')
 
-// Poll
+// Poll form
 const showPollModal = ref(false)
 const pollQuestion = ref('')
 const pollOptions = ref<string[]>(['', ''])
 
-// Task
+// Task form
 const showTaskModal = ref(false)
+const editingTaskId = ref<string | null>(null)
 const taskTitle = ref('')
 const taskSection = ref('До поездки')
 const taskAssignee = ref('')
 
-function getExpense(id?: string) { return id ? store.expenses.find(e => e.id === id) : undefined }
+// Action sheet / Delete confirm
+const showActionSheet = ref(false)
+const actionSheetHeader = ref('')
+const actionSheetButtons = ref<any[]>([])
+const showDeleteConfirm = ref(false)
+const deleteConfirmButtons = ref<any[]>([])
+const pendingDeleteAction = ref<(() => void) | null>(null)
+
+function getExpense(id?: string) { return id ? store.expenses.find(e => e.id === id && !e.isDeleted) : undefined }
 function getEvent(id?: string) { return id ? store.events.find(e => e.id === id) : undefined }
 function getPoll(id?: string) { return id ? store.polls.find(p => p.id === id) : undefined }
 function getTask(id?: string) { return id ? store.tasks.find(t => t.id === id) : undefined }
@@ -366,7 +412,8 @@ function getExpenseSplitText(exp: Expense) {
   const n = exp.splits.length
   if (exp.splitMode === 'equal') return `${n} чел. · по ${Math.round(exp.amount / n).toLocaleString()} ₽`
   if (exp.splitMode === 'itemized') return `По позициям · ${n} чел.`
-  if (exp.splitMode === 'selected') return `${n} чел.`
+  if (exp.splitMode === 'selected') return `${n} из ${trip.value?.members.length ?? n} чел.`
+  if (exp.splitMode === 'custom') return `Свои суммы · ${n} чел.`
   return `${n} чел.`
 }
 
@@ -377,9 +424,7 @@ function pollPercent(pollId: string, optIdx: number) {
   return total === 0 ? 0 : (poll.options[optIdx].votes.length / total) * 100
 }
 
-function handleVote(pollId: string, optIdx: number) {
-  store.votePoll(pollId, optIdx, currentUserId.value)
-}
+function handleVote(pollId: string, optIdx: number) { store.votePoll(pollId, optIdx, currentUserId.value) }
 
 function formatTime(dateStr: string) {
   const d = new Date(dateStr)
@@ -398,6 +443,96 @@ function toggleMember(userId: string) {
   else selectedMembers.value.push(userId)
 }
 
+// ===== Card Actions (Edit/Delete) =====
+function openCardActions(msg: ChatMessage) {
+  const buttons: any[] = []
+  if (msg.type === 'expense' && msg.referenceId) {
+    const exp = getExpense(msg.referenceId)
+    if (!exp) return
+    actionSheetHeader.value = exp.title
+    buttons.push({ text: '✏️ Редактировать', handler: () => openEditExpense(exp) })
+    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteExpense(exp.id)) })
+  } else if (msg.type === 'event' && msg.referenceId) {
+    const evt = getEvent(msg.referenceId)
+    if (!evt) return
+    actionSheetHeader.value = evt.title
+    buttons.push({ text: '✏️ Редактировать', handler: () => openEditEvent(evt) })
+    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteEvent(evt.id)) })
+  } else if (msg.type === 'task' && msg.referenceId) {
+    const task = getTask(msg.referenceId)
+    if (!task) return
+    actionSheetHeader.value = task.title
+    buttons.push({ text: task.isCompleted ? '↩️ Вернуть' : '✅ Выполнить', handler: () => store.toggleTask(task.id, currentUserId.value) })
+    buttons.push({ text: '✏️ Редактировать', handler: () => openEditTask(task) })
+    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteTask(task.id)) })
+  } else if (msg.type === 'poll' && msg.referenceId) {
+    const poll = getPoll(msg.referenceId)
+    if (!poll) return
+    actionSheetHeader.value = poll.question
+    buttons.push({ text: '🗑 Удалить опрос', role: 'destructive', handler: () => confirmDelete(() => store.deletePoll(poll.id)) })
+  } else {
+    return
+  }
+  buttons.push({ text: 'Отмена', role: 'cancel' })
+  actionSheetButtons.value = buttons
+  showActionSheet.value = true
+}
+
+function confirmDelete(action: () => void) {
+  pendingDeleteAction.value = action
+  deleteConfirmButtons.value = [
+    { text: 'Отмена', role: 'cancel' },
+    { text: 'Удалить', role: 'destructive', handler: () => { action(); pendingDeleteAction.value = null } },
+  ]
+  showDeleteConfirm.value = true
+}
+
+// ===== Edit Expense =====
+function openEditExpense(exp: Expense) {
+  editingExpenseId.value = exp.id
+  expenseTitle.value = exp.title
+  expenseAmount.value = exp.amount
+  expenseCategory.value = exp.category
+  expenseType.value = exp.type
+  if (exp.type === 'personal') {
+    expenseSplitMode.value = 'equal_all'
+    selectedMembers.value = []
+  } else if (exp.splitMode === 'selected') {
+    expenseSplitMode.value = 'equal_selected'
+    selectedMembers.value = exp.splits.map(s => s.userId)
+  } else if (exp.splitMode === 'custom' || exp.splitMode === 'itemized') {
+    expenseSplitMode.value = 'custom'
+    selectedMembers.value = []
+    Object.keys(customAmounts).forEach(k => delete customAmounts[k])
+    exp.splits.forEach(s => { customAmounts[s.userId] = s.amount })
+    trip.value?.members.forEach(m => { if (!(m.userId in customAmounts)) customAmounts[m.userId] = 0 })
+  } else {
+    expenseSplitMode.value = 'equal_all'
+    selectedMembers.value = []
+  }
+  showExpenseModal.value = true
+}
+
+// ===== Edit Event =====
+function openEditEvent(evt: { id: string; title: string; date: string; time: string; location?: string }) {
+  editingEventId.value = evt.id
+  eventTitle.value = evt.title
+  eventDate.value = evt.date
+  eventTime.value = evt.time
+  eventLocation.value = evt.location ?? ''
+  showEventModal.value = true
+}
+
+// ===== Edit Task =====
+function openEditTask(task: { id: string; title: string; section: string; assigneeId?: string }) {
+  editingTaskId.value = task.id
+  taskTitle.value = task.title
+  taskSection.value = task.section
+  taskAssignee.value = task.assigneeId ?? ''
+  showTaskModal.value = true
+}
+
+// ===== Send/Create =====
 function sendMessage() {
   const text = newMessage.value.trim()
   if (!text) return
@@ -409,6 +544,7 @@ function sendMessage() {
 
 function openAddExpense() {
   showActions.value = false
+  editingExpenseId.value = null
   expenseTitle.value = ''
   expenseAmount.value = 0
   expenseCategory.value = 'food'
@@ -422,6 +558,7 @@ function openAddExpense() {
 
 function openAddEvent() {
   showActions.value = false
+  editingEventId.value = null
   eventTitle.value = ''
   eventDate.value = ''
   eventTime.value = ''
@@ -438,6 +575,7 @@ function openAddPoll() {
 
 function openAddTask() {
   showActions.value = false
+  editingTaskId.value = null
   taskTitle.value = ''
   taskSection.value = sections.value[0] || 'До поездки'
   taskAssignee.value = ''
@@ -465,26 +603,46 @@ function saveExpense() {
     splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) }))
   }
 
-  store.addExpense({
-    tripId: tripId.value,
-    title: expenseTitle.value,
-    amount: expenseAmount.value,
-    currency: '₽',
-    category: expenseCategory.value as any,
-    type: expenseType.value as any,
-    splitMode,
-    source: 'personal_payment',
-    paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }],
-    splits,
-    createdBy: currentUserId.value,
-  })
+  if (editingExpenseId.value) {
+    store.updateExpense(editingExpenseId.value, {
+      title: expenseTitle.value,
+      amount: expenseAmount.value,
+      category: expenseCategory.value as any,
+      type: expenseType.value as any,
+      splitMode,
+      splits,
+    })
+  } else {
+    store.addExpense({
+      tripId: tripId.value,
+      title: expenseTitle.value,
+      amount: expenseAmount.value,
+      currency: '₽',
+      category: expenseCategory.value as any,
+      type: expenseType.value as any,
+      splitMode,
+      source: 'personal_payment',
+      paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }],
+      splits,
+      createdBy: currentUserId.value,
+    })
+  }
   showExpenseModal.value = false
   scrollToBottom()
 }
 
 function saveEvent() {
   if (!eventTitle.value || !eventDate.value || !eventTime.value) return
-  store.addEvent(tripId.value, eventTitle.value, eventDate.value, eventTime.value, eventLocation.value, currentUserId.value)
+  if (editingEventId.value) {
+    store.updateEvent(editingEventId.value, {
+      title: eventTitle.value,
+      date: eventDate.value,
+      time: eventTime.value,
+      location: eventLocation.value || undefined,
+    })
+  } else {
+    store.addEvent(tripId.value, eventTitle.value, eventDate.value, eventTime.value, eventLocation.value, currentUserId.value)
+  }
   showEventModal.value = false
   scrollToBottom()
 }
@@ -499,15 +657,20 @@ function savePoll() {
 
 function saveTask() {
   if (!taskTitle.value) return
-  store.addTaskFromChat(tripId.value, taskTitle.value, taskSection.value, taskAssignee.value || undefined, currentUserId.value)
+  if (editingTaskId.value) {
+    store.updateTask(editingTaskId.value, {
+      title: taskTitle.value,
+      section: taskSection.value,
+      assigneeId: taskAssignee.value || undefined,
+    })
+  } else {
+    store.addTaskFromChat(tripId.value, taskTitle.value, taskSection.value, taskAssignee.value || undefined, currentUserId.value)
+  }
   showTaskModal.value = false
   scrollToBottom()
 }
 
-function scrollToBottom() {
-  nextTick(() => { contentRef.value?.$el?.scrollToBottom?.(300) })
-}
-
+function scrollToBottom() { nextTick(() => { contentRef.value?.$el?.scrollToBottom?.(300) }) }
 watch(chatMessages, () => scrollToBottom(), { deep: true })
 </script>
 
@@ -517,7 +680,8 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 .chat-bubble-wrapper { display: flex; padding: 2px 8px; }
 .bubble-time { font-size: 11px; opacity: 0.6; text-align: right; margin-top: 2px; }
 
-.chat-card-wrapper { padding: 3px 8px; }
+.chat-card-wrapper { padding: 3px 8px; cursor: pointer; }
+.chat-card-wrapper:active .compact-card { opacity: 0.8; transform: scale(0.98); }
 
 .compact-card {
   background: white;
@@ -525,46 +689,33 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
   padding: 10px 14px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   border-left: 4px solid #D1D5DB;
+  transition: opacity 0.15s, transform 0.15s;
 }
 .expense-card { border-left-color: #10B981; }
 .event-card { border-left-color: #4F46E5; }
 .poll-card { border-left-color: #F59E0B; }
 .task-card { border-left-color: #8B5CF6; }
 
-.compact-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.compact-row { display: flex; align-items: center; gap: 8px; }
 .compact-icon { font-size: 16px; flex-shrink: 0; }
 .compact-title { flex: 1; font-size: 14px; font-weight: 600; color: #1F2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .compact-amount { font-size: 15px; font-weight: 700; color: var(--ion-color-primary); flex-shrink: 0; }
 
-.compact-meta {
-  font-size: 12px;
-  color: #9CA3AF;
-  margin-top: 3px;
-  padding-left: 24px;
-}
+.compact-meta { font-size: 12px; color: #9CA3AF; margin-top: 3px; padding-left: 24px; }
 .compact-time { float: right; }
+
+.task-done { text-decoration: line-through; opacity: 0.5; }
 
 .poll-options { margin: 6px 0 4px; }
 .poll-option {
-  position: relative;
-  padding: 8px 10px;
-  margin: 4px 0;
-  border-radius: 8px;
-  background: #F3F4F6;
-  cursor: pointer;
-  overflow: hidden;
-  font-size: 13px;
+  position: relative; padding: 8px 10px; margin: 4px 0;
+  border-radius: 8px; background: #F3F4F6; cursor: pointer;
+  overflow: hidden; font-size: 13px;
 }
 .poll-option.voted { background: #EEF2FF; }
 .poll-option-bar {
   position: absolute; top: 0; left: 0; height: 100%;
-  background: rgba(79, 70, 229, 0.12);
-  border-radius: 8px;
-  transition: width 0.3s ease;
+  background: rgba(79, 70, 229, 0.12); border-radius: 8px; transition: width 0.3s ease;
 }
 .poll-option-text { position: relative; }
 .poll-option-count { position: relative; float: right; font-weight: 600; color: var(--ion-color-primary); }
@@ -572,28 +723,22 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 .chat-input-toolbar { --background: white; padding: 4px 0; }
 .chat-input-row { display: flex; align-items: center; padding: 0 4px; }
 .chat-input {
-  flex: 1;
-  --background: #F3F4F6;
-  --border-radius: 20px;
-  --padding-start: 14px;
-  --padding-end: 14px;
-  font-size: 15px;
+  flex: 1; --background: #F3F4F6; --border-radius: 20px;
+  --padding-start: 14px; --padding-end: 14px; font-size: 15px;
 }
 .plus-btn { --color: var(--ion-color-primary); font-size: 24px; }
-.quick-actions {
-  display: flex;
-  gap: 6px;
-  padding: 6px 12px;
-  overflow-x: auto;
-}
+.quick-actions { display: flex; gap: 6px; padding: 6px 12px; overflow-x: auto; }
 
+.split-segment { margin: 8px 0; }
 .participants-list { margin: 8px 0; }
+.participant-item { --min-height: 44px; }
 .custom-amounts { margin: 8px 0; }
 .split-preview {
-  padding: 8px 16px;
-  font-size: 13px;
-  color: var(--ion-color-primary);
-  font-weight: 600;
+  padding: 8px 16px; font-size: 13px;
+  color: var(--ion-color-primary); font-weight: 600;
+}
+.split-hint {
+  padding: 8px 16px; font-size: 13px; color: #9CA3AF;
 }
 .split-error { color: var(--ion-color-danger); }
 </style>

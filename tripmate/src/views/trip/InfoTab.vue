@@ -102,16 +102,23 @@
             <ion-label><strong>🔗 Ссылки</strong></ion-label>
           </ion-item>
           <div slot="content" class="accordion-content">
-            <div v-for="link in tripLinks" :key="link.id" class="link-item">
-              <div class="link-title">
-                <a :href="link.url" target="_blank">{{ link.title || link.url }}</a>
-              </div>
-              <div class="link-meta">
-                <span v-if="link.category" class="link-category">{{ link.category }}</span>
-                · {{ store.getUserName(link.createdBy) }}
-                <span v-if="link.comment"> · {{ link.comment }}</span>
-              </div>
-            </div>
+            <ion-list>
+              <ion-item-sliding v-for="link in tripLinks" :key="link.id">
+                <ion-item lines="none" class="link-ion-item">
+                  <ion-label>
+                    <a :href="link.url" target="_blank" class="link-title-a">{{ link.title || link.url }}</a>
+                    <p class="link-meta-text">
+                      <span v-if="link.category" class="link-category">{{ link.category }}</span>
+                      · {{ store.getUserName(link.createdBy) }}
+                      <span v-if="link.comment"> · {{ link.comment }}</span>
+                    </p>
+                  </ion-label>
+                </ion-item>
+                <ion-item-options side="end">
+                  <ion-item-option color="danger" @click="confirmDeleteLink(link)">🗑</ion-item-option>
+                </ion-item-options>
+              </ion-item-sliding>
+            </ion-list>
             <ion-button fill="outline" expand="block" size="small" class="ion-margin-top" @click="showAddLink = true">
               + Добавить ссылку
             </ion-button>
@@ -159,13 +166,13 @@
       />
     </ion-content>
 
+    <!-- Add link modal -->
     <ion-modal :is-open="showAddLink" @did-dismiss="showAddLink = false">
       <ion-header>
         <ion-toolbar>
+          <ion-buttons slot="start"><ion-button @click="showAddLink = false">Отмена</ion-button></ion-buttons>
           <ion-title>Новая ссылка</ion-title>
-          <ion-buttons slot="end">
-            <ion-button @click="showAddLink = false">Закрыть</ion-button>
-          </ion-buttons>
+          <ion-buttons slot="end"><ion-button @click="saveLink" :disabled="!linkUrl" strong>Добавить</ion-button></ion-buttons>
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
@@ -183,11 +190,17 @@
             <ion-select-option value="Другое">📦 Другое</ion-select-option>
           </ion-select>
         </ion-item>
-        <ion-button expand="block" class="ion-margin-top" @click="saveLink" :disabled="!linkUrl">
-          Добавить
-        </ion-button>
       </ion-content>
     </ion-modal>
+
+    <!-- Delete link confirm -->
+    <ion-alert
+      :is-open="showDeleteLinkAlert"
+      header="Удалить ссылку?"
+      :message="'«' + deletingLinkTitle + '» будет удалена.'"
+      :buttons="deleteLinkButtons"
+      @did-dismiss="showDeleteLinkAlert = false"
+    />
   </ion-page>
 </template>
 
@@ -198,10 +211,12 @@ import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
   IonAccordionGroup, IonAccordion, IonButton, IonButtons, IonAvatar, IonModal,
   IonInput, IonSelect, IonSelectOption, IonAlert,
+  IonItemSliding, IonItemOptions, IonItemOption,
 } from '@ionic/vue'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
 import { turkeyInfo } from '../../data/mock'
+import type { Link } from '../../types'
 
 const route = useRoute()
 const store = useTripsStore()
@@ -230,6 +245,21 @@ const linkUrl = ref('')
 const linkTitle = ref('')
 const linkCategory = ref('Другое')
 
+// Delete link
+const showDeleteLinkAlert = ref(false)
+const deletingLinkId = ref('')
+const deletingLinkTitle = ref('')
+const deleteLinkButtons = computed(() => [
+  { text: 'Отмена', role: 'cancel' },
+  { text: 'Удалить', role: 'destructive', handler: () => { store.deleteLink(deletingLinkId.value) } },
+])
+
+function confirmDeleteLink(link: Link) {
+  deletingLinkId.value = link.id
+  deletingLinkTitle.value = link.title || link.url
+  showDeleteLinkAlert.value = true
+}
+
 function pluralDays(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return 'день'
   if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return 'дня'
@@ -247,90 +277,35 @@ function saveLink() {
 
 <style scoped>
 .countdown-number {
-  font-size: 48px;
-  font-weight: 800;
-  color: var(--ion-color-primary);
-  line-height: 1.1;
-  margin: 8px 0;
+  font-size: 48px; font-weight: 800; color: var(--ion-color-primary);
+  line-height: 1.1; margin: 8px 0;
 }
-.accordion-content {
-  padding: 8px 16px 16px;
-}
+.accordion-content { padding: 8px 16px 16px; }
 .info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6;
-  font-size: 14px;
-  gap: 12px;
+  display: flex; justify-content: space-between; padding: 8px 0;
+  border-bottom: 1px solid #F3F4F6; font-size: 14px; gap: 12px;
 }
-.info-label {
-  color: #6B7280;
-  min-width: 100px;
-  flex-shrink: 0;
-}
+.info-label { color: #6B7280; min-width: 100px; flex-shrink: 0; }
 .doc-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6;
-  font-size: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px;
 }
-.link-item {
-  padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6;
-}
-.link-title a {
-  color: var(--ion-color-primary);
-  text-decoration: none;
-  font-size: 14px;
-}
-.link-meta {
-  font-size: 12px;
-  color: #9CA3AF;
-  margin-top: 2px;
-}
+.link-ion-item { --padding-start: 0; --inner-padding-end: 0; }
+.link-title-a { color: var(--ion-color-primary); text-decoration: none; font-size: 14px; }
+.link-meta-text { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
 .link-category {
-  background: #EEF2FF;
-  color: var(--ion-color-primary);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
+  background: #EEF2FF; color: var(--ion-color-primary);
+  padding: 1px 6px; border-radius: 4px; font-size: 11px;
 }
 .phrase-row {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6;
-  gap: 8px;
+  display: flex; align-items: center; padding: 8px 0;
+  border-bottom: 1px solid #F3F4F6; gap: 8px;
 }
-.phrase-ru {
-  flex: 1;
-  font-size: 14px;
-  color: #1F2937;
-}
-.phrase-local {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ion-color-primary);
-}
-.member-avatar {
-  --border-radius: 50%;
-  width: 36px;
-  height: 36px;
-}
+.phrase-ru { flex: 1; font-size: 14px; color: #1F2937; }
+.phrase-local { flex: 1; font-size: 14px; font-weight: 600; color: var(--ion-color-primary); }
+.member-avatar { --border-radius: 50%; width: 36px; height: 36px; }
 .avatar-letter {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ion-color-primary);
-  color: white;
-  font-weight: 700;
-  font-size: 16px;
-  border-radius: 50%;
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: var(--ion-color-primary); color: white; font-weight: 700; font-size: 16px; border-radius: 50%;
 }
 </style>

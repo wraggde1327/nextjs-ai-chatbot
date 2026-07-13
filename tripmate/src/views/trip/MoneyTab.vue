@@ -78,14 +78,20 @@
 
         <div class="section-header">История трат</div>
         <ion-list>
-          <ion-item v-for="exp in sharedExpenses" :key="exp.id" button>
-            <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
-            <ion-label>
-              <h3>{{ exp.title }}</h3>
-              <p>{{ store.getUserName(exp.createdBy) }} · {{ formatDate(exp.createdAt) }}</p>
-            </ion-label>
-            <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
-          </ion-item>
+          <ion-item-sliding v-for="exp in sharedExpenses" :key="exp.id">
+            <ion-item button @click="openEditExpense(exp)">
+              <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
+              <ion-label>
+                <h3>{{ exp.title }}</h3>
+                <p>{{ store.getUserName(exp.createdBy) }} · {{ formatDate(exp.createdAt) }}</p>
+              </ion-label>
+              <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
+            </ion-item>
+            <ion-item-options side="end">
+              <ion-item-option color="primary" @click="openEditExpense(exp)">✏️</ion-item-option>
+              <ion-item-option color="danger" @click="confirmDeleteExpense(exp)">🗑</ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
         </ion-list>
       </template>
 
@@ -110,14 +116,20 @@
 
         <div class="section-header">Мои личные траты</div>
         <ion-list>
-          <ion-item v-for="exp in personalExpenses" :key="exp.id">
-            <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
-            <ion-label>
-              <h3>{{ exp.title }}</h3>
-              <p>{{ formatDate(exp.createdAt) }}</p>
-            </ion-label>
-            <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
-          </ion-item>
+          <ion-item-sliding v-for="exp in personalExpenses" :key="exp.id">
+            <ion-item button @click="openEditExpense(exp)">
+              <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
+              <ion-label>
+                <h3>{{ exp.title }}</h3>
+                <p>{{ formatDate(exp.createdAt) }}</p>
+              </ion-label>
+              <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
+            </ion-item>
+            <ion-item-options side="end">
+              <ion-item-option color="primary" @click="openEditExpense(exp)">✏️</ion-item-option>
+              <ion-item-option color="danger" @click="confirmDeleteExpense(exp)">🗑</ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
           <ion-item v-if="!personalExpenses.length">
             <ion-label color="medium">Нет личных трат</ion-label>
           </ion-item>
@@ -166,6 +178,44 @@
         />
       </template>
     </ion-content>
+
+    <!-- Edit Expense Modal -->
+    <ion-modal :is-open="showEditModal" @did-dismiss="showEditModal = false">
+      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start"><ion-button @click="showEditModal = false">Отмена</ion-button></ion-buttons>
+          <ion-title>Редактировать</ion-title>
+          <ion-buttons slot="end"><ion-button @click="saveEditedExpense" :disabled="!editTitle || !editAmount" strong>Сохранить</ion-button></ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input v-model="editTitle" label="Что" label-placement="floating" />
+        </ion-item>
+        <ion-item>
+          <ion-input v-model.number="editAmount" label="Сумма (₽)" label-placement="floating" type="number" inputmode="numeric" />
+        </ion-item>
+        <ion-item>
+          <ion-select v-model="editCategory" label="Категория" label-placement="floating" interface="action-sheet">
+            <ion-select-option value="food">🍽 Еда</ion-select-option>
+            <ion-select-option value="transport">🚗 Транспорт</ion-select-option>
+            <ion-select-option value="housing">🏨 Жильё</ion-select-option>
+            <ion-select-option value="fun">🎭 Развлечения</ion-select-option>
+            <ion-select-option value="shopping">🛍 Покупки</ion-select-option>
+            <ion-select-option value="other">📦 Другое</ion-select-option>
+          </ion-select>
+        </ion-item>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Delete Confirm -->
+    <ion-alert
+      :is-open="showDeleteAlert"
+      header="Удалить трату?"
+      :message="'«' + deletingTitle + '» будет удалена.'"
+      :buttons="deleteAlertButtons"
+      @did-dismiss="showDeleteAlert = false"
+    />
   </ion-page>
 </template>
 
@@ -174,12 +224,14 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSegment, IonSegmentButton,
-  IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton, IonAlert,
+  IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton, IonButtons,
+  IonAlert, IonModal, IonInput, IonSelect, IonSelectOption,
+  IonItemSliding, IonItemOptions, IonItemOption,
 } from '@ionic/vue'
 import { lockClosedOutline } from 'ionicons/icons'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
-import type { ExpenseCategory, DepositStatus } from '../../types'
+import type { Expense, ExpenseCategory, DepositStatus } from '../../types'
 
 const route = useRoute()
 const store = useTripsStore()
@@ -233,18 +285,48 @@ const categoryStats = computed(() => {
     shopping: { icon: '🛍', name: 'Покупки', amount: 0 },
     other: { icon: '📦', name: 'Другое', amount: 0 },
   }
-  sharedExpenses.value.forEach(e => {
-    if (cats[e.category]) cats[e.category].amount += e.amount
-  })
+  sharedExpenses.value.forEach(e => { if (cats[e.category]) cats[e.category].amount += e.amount })
   return Object.entries(cats)
     .filter(([, v]) => v.amount > 0)
-    .map(([key, v]) => ({
-      key,
-      ...v,
-      percent: totalShared.value > 0 ? Math.round((v.amount / totalShared.value) * 100) : 0,
-    }))
+    .map(([key, v]) => ({ key, ...v, percent: totalShared.value > 0 ? Math.round((v.amount / totalShared.value) * 100) : 0 }))
     .sort((a, b) => b.amount - a.amount)
 })
+
+// Edit expense
+const showEditModal = ref(false)
+const editingId = ref('')
+const editTitle = ref('')
+const editAmount = ref(0)
+const editCategory = ref('food')
+
+function openEditExpense(exp: Expense) {
+  editingId.value = exp.id
+  editTitle.value = exp.title
+  editAmount.value = exp.amount
+  editCategory.value = exp.category
+  showEditModal.value = true
+}
+
+function saveEditedExpense() {
+  if (!editTitle.value || !editAmount.value) return
+  store.updateExpense(editingId.value, { title: editTitle.value, amount: editAmount.value, category: editCategory.value as ExpenseCategory })
+  showEditModal.value = false
+}
+
+// Delete expense
+const showDeleteAlert = ref(false)
+const deletingId = ref('')
+const deletingTitle = ref('')
+const deleteAlertButtons = computed(() => [
+  { text: 'Отмена', role: 'cancel' },
+  { text: 'Удалить', role: 'destructive', handler: () => { store.deleteExpense(deletingId.value) } },
+])
+
+function confirmDeleteExpense(exp: Expense) {
+  deletingId.value = exp.id
+  deletingTitle.value = exp.title
+  showDeleteAlert.value = true
+}
 
 function categoryIcon(cat: ExpenseCategory) {
   const icons: Record<string, string> = { housing: '🏨', transport: '🚗', food: '🍽', fun: '🎭', shopping: '🛍', other: '📦' }
@@ -278,21 +360,9 @@ function formatDate(dateStr: string) {
 </script>
 
 <style scoped>
-.stat-label {
-  font-size: 13px;
-  color: #6B7280;
-}
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1F2937;
-}
-.category-row {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  gap: 8px;
-}
+.stat-label { font-size: 13px; color: #6B7280; }
+.stat-value { font-size: 22px; font-weight: 700; color: #1F2937; }
+.category-row { display: flex; align-items: center; padding: 8px 0; gap: 8px; }
 .category-icon { font-size: 20px; }
 .category-name { flex: 1; font-size: 14px; }
 .category-amount { font-weight: 600; font-size: 14px; }
