@@ -37,7 +37,7 @@ export const mockTrips: Trip[] = [
       { userId: 'user-4', role: 'member', joinedAt: '2026-05-03' },
       { userId: 'user-5', role: 'member', joinedAt: '2026-05-03' },
       { userId: 'user-6', role: 'member', joinedAt: '2026-05-04' },
-      { userId: 'user-7', role: 'member', joinedAt: '2026-05-05' },
+      { userId: 'user-7', role: 'member', joinedAt: '2026-05-05', leftAt: '2026-06-15' },
     ],
     wallets: [
       { id: 'w-1', tripId: 'trip-1', name: 'Test и Лиза', memberIds: ['user-1', 'user-6'] },

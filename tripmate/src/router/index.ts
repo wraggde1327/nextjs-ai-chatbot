@@ -11,8 +11,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/trip/TripTabs.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', redirect: (to) => `${to.path}/chat` },
-      { path: 'chat', name: 'TripChat', component: () => import('../views/trip/ChatTab.vue') },
+      { path: '', redirect: (to) => `${to.path}/main` },
+      { path: 'main', name: 'TripMain', component: () => import('../views/trip/MainTab.vue') },
       { path: 'money', name: 'TripMoney', component: () => import('../views/trip/MoneyTab.vue') },
       { path: 'today', name: 'TripToday', component: () => import('../views/trip/TodayTab.vue') },
       { path: 'tasks', name: 'TripTasks', component: () => import('../views/trip/TasksTab.vue') },

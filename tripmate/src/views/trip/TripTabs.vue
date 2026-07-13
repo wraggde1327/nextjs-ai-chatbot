@@ -3,9 +3,9 @@
     <ion-tabs>
       <ion-router-outlet />
       <ion-tab-bar slot="bottom">
-        <ion-tab-button tab="chat" :href="`/trip/${tripId}/chat`">
-          <ion-icon :icon="chatbubblesOutline" />
-          <ion-label>Чат</ion-label>
+        <ion-tab-button tab="main" :href="`/trip/${tripId}/main`">
+          <ion-icon :icon="homeOutline" />
+          <ion-label>Главная</ion-label>
         </ion-tab-button>
         <ion-tab-button tab="money" :href="`/trip/${tripId}/money`">
           <ion-icon :icon="walletOutline" />
@@ -32,7 +32,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { IonPage, IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel } from '@ionic/vue'
-import { chatbubblesOutline, walletOutline, calendarOutline, checkmarkCircleOutline, informationCircleOutline } from 'ionicons/icons'
+import { homeOutline, walletOutline, calendarOutline, checkmarkCircleOutline, informationCircleOutline } from 'ionicons/icons'
 
 const route = useRoute()
 const tripId = computed(() => route.params.tripId as string)

@@ -1,20 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Trip, Expense, ChatMessage, ChatMessageType, TripEvent, Task, Poll, Link, Fund } from '../types'
+import type { Trip, Expense, ChatMessage, ChatMessageType, TripEvent, Task, Poll, Link, Fund, TripMember } from '../types'
 import {
   mockTrips, mockExpenses, mockMessages, mockEvents,
   mockTasks, mockPolls, mockLinks, mockFund, mockUsers,
 } from '../data/mock'
 
 export const useTripsStore = defineStore('trips', () => {
-  const trips = ref<Trip[]>([...mockTrips])
+  const trips = ref<Trip[]>(mockTrips.map(t => ({ ...t, members: t.members.map(m => ({ ...m })), wallets: t.wallets.map(w => ({ ...w })) })))
   const expenses = ref<Expense[]>([...mockExpenses])
   const messages = ref<ChatMessage[]>([...mockMessages])
   const events = ref<TripEvent[]>([...mockEvents])
   const tasks = ref<Task[]>([...mockTasks])
   const polls = ref<Poll[]>([...mockPolls])
   const links = ref<Link[]>([...mockLinks])
-  const fund = ref<Fund | null>({ ...mockFund })
+  const fund = ref<Fund | null>(mockFund ? { ...mockFund, contributions: mockFund.contributions.map(c => ({ ...c })) } : null)
 
   const activeTrips = computed(() => trips.value.filter(t => !t.isArchived))
   const archivedTrips = computed(() => trips.value.filter(t => t.isArchived))
@@ -22,6 +22,54 @@ export const useTripsStore = defineStore('trips', () => {
   function getUserName(userId: string): string {
     return mockUsers[userId]?.name ?? 'Неизвестный'
   }
+
+  function getActiveMembers(tripId: string): TripMember[] {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return []
+    return trip.members.filter(m => !m.leftAt)
+  }
+
+  function getLeftMembers(tripId: string): TripMember[] {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return []
+    return trip.members.filter(m => !!m.leftAt)
+  }
+
+  function removeMember(tripId: string, userId: string) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return
+    const member = trip.members.find(m => m.userId === userId)
+    if (member) {
+      member.leftAt = new Date().toISOString().split('T')[0]
+      messages.value.push({
+        id: `msg-${Date.now()}`, tripId, type: 'system',
+        text: `${getUserName(userId)} покинул(а) поездку`,
+        createdBy: userId, createdAt: new Date().toISOString(),
+      })
+    }
+  }
+
+  function restoreMember(tripId: string, userId: string) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return
+    const member = trip.members.find(m => m.userId === userId)
+    if (member) {
+      member.leftAt = undefined
+      messages.value.push({
+        id: `msg-${Date.now()}`, tripId, type: 'system',
+        text: `${getUserName(userId)} вернулся(ась) в поездку`,
+        createdBy: userId, createdAt: new Date().toISOString(),
+      })
+    }
+  }
+
+  function getWalletForUser(tripId: string, userId: string) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return null
+    return trip.wallets.find(w => w.memberIds.includes(userId) && w.memberIds.length > 1) ?? null
+  }
+
+  // ===== QUERIES =====
 
   function getTripExpenses(tripId: string) {
     return expenses.value.filter(e => e.tripId === tripId && !e.isDeleted)
@@ -53,6 +101,20 @@ export const useTripsStore = defineStore('trips', () => {
       const db = `${b.date}T${b.time}`
       return da.localeCompare(db)
     })
+  }
+
+  function getUpcomingEvents(tripId: string, limit = 5) {
+    const now = new Date()
+    const todayStr = now.toISOString().split('T')[0]
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    return getTripEvents(tripId).filter(e => {
+      if (e.date > todayStr) return true
+      if (e.date === todayStr) {
+        const [h, m] = e.time.split(':').map(Number)
+        return h * 60 + m >= nowMinutes
+      }
+      return false
+    }).slice(0, limit)
   }
 
   function getEventsForDate(tripId: string, date: string) {
@@ -219,9 +281,10 @@ export const useTripsStore = defineStore('trips', () => {
   return {
     trips, expenses, messages, events, tasks, polls, links, fund,
     activeTrips, archivedTrips,
-    getUserName,
+    getUserName, getActiveMembers, getLeftMembers, getWalletForUser,
+    removeMember, restoreMember,
     getTripExpenses, getSharedExpenses, getPersonalExpenses, getDeposits,
-    getTripMessages, getTripEvents, getEventsForDate,
+    getTripMessages, getTripEvents, getUpcomingEvents, getEventsForDate,
     getTripTasks, getTaskSections, getTripPolls, getTripLinks, getTripFund,
     calculateBalances,
     addExpense, addMessage, addEvent, addTask, addTaskFromChat, addPoll, addLink,

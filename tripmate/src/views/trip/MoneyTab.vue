@@ -248,7 +248,7 @@ const tripFund = computed(() => store.getTripFund(tripId.value))
 
 const totalShared = computed(() => sharedExpenses.value.reduce((s, e) => s + e.amount, 0))
 const totalPersonal = computed(() => personalExpenses.value.reduce((s, e) => s + e.amount, 0))
-const memberCount = computed(() => trip.value?.members.length ?? 1)
+const memberCount = computed(() => store.getActiveMembers(tripId.value).length || 1)
 const perPerson = computed(() => Math.round(totalShared.value / memberCount.value))
 
 const myShare = computed(() => {

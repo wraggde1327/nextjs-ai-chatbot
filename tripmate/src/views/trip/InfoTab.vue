@@ -22,9 +22,7 @@
       <!-- Country info -->
       <ion-accordion-group :multiple="true">
         <ion-accordion value="visa">
-          <ion-item slot="header">
-            <ion-label><strong>📌 Въезд и визы</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>📌 Въезд и визы</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <div class="info-row"><span class="info-label">Виза</span><span>{{ info.visa }}</span></div>
             <div class="info-row"><span class="info-label">Паспорт</span><span>{{ info.passport }}</span></div>
@@ -32,9 +30,7 @@
         </ion-accordion>
 
         <ion-accordion value="money">
-          <ion-item slot="header">
-            <ion-label><strong>💱 Валюта и деньги</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>💱 Валюта и деньги</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <div class="info-row"><span class="info-label">Валюта</span><span>{{ info.currency }}</span></div>
             <div class="info-row"><span class="info-label">Курс</span><span>{{ info.exchangeRate }}</span></div>
@@ -44,9 +40,7 @@
         </ion-accordion>
 
         <ion-accordion value="practical">
-          <ion-item slot="header">
-            <ion-label><strong>🔌 Практическое</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>🔌 Практическое</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <div class="info-row"><span class="info-label">Розетки</span><span>{{ info.sockets }}</span></div>
             <div class="info-row"><span class="info-label">Напряжение</span><span>{{ info.voltage }}</span></div>
@@ -56,51 +50,29 @@
         </ion-accordion>
 
         <ion-accordion value="emergency">
-          <ion-item slot="header">
-            <ion-label><strong>🆘 Экстренное</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>🆘 Экстренное</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <div class="info-row"><span class="info-label">Скорая / Пожарные</span><span>{{ info.emergency }}</span></div>
             <div class="info-row"><span class="info-label">Полиция</span><span>{{ info.police }}</span></div>
             <div class="info-row">
               <span class="info-label">Посольство</span>
-              <span>
-                {{ info.embassy }}
-                <br />
-                <a :href="'tel:' + info.embassyPhone">📞 {{ info.embassyPhone }}</a>
-              </span>
+              <span>{{ info.embassy }}<br /><a :href="'tel:' + info.embassyPhone">📞 {{ info.embassyPhone }}</a></span>
             </div>
           </div>
         </ion-accordion>
 
         <ion-accordion value="docs">
-          <ion-item slot="header">
-            <ion-label><strong>📄 Документы</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>📄 Документы</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
-            <div class="doc-item">
-              <span>✈️ Билет МСК → Анталья (SU-2134)</span>
-              <ion-button fill="clear" size="small">📄 Открыть</ion-button>
-            </div>
-            <div class="doc-item">
-              <span>✈️ Билет Анталья → МСК (SU-2135)</span>
-              <ion-button fill="clear" size="small">📄 Открыть</ion-button>
-            </div>
-            <div class="doc-item">
-              <span>🏨 Hotel Sunrise</span>
-              <ion-button fill="clear" size="small">📄 Открыть</ion-button>
-            </div>
-            <div class="doc-item">
-              <span>🛡 Страховка АА-123456</span>
-              <ion-button fill="clear" size="small">📄 Открыть</ion-button>
-            </div>
+            <div class="doc-item"><span>✈️ Билет МСК → Анталья (SU-2134)</span><ion-button fill="clear" size="small">📄</ion-button></div>
+            <div class="doc-item"><span>✈️ Билет Анталья → МСК (SU-2135)</span><ion-button fill="clear" size="small">📄</ion-button></div>
+            <div class="doc-item"><span>🏨 Hotel Sunrise</span><ion-button fill="clear" size="small">📄</ion-button></div>
+            <div class="doc-item"><span>🛡 Страховка АА-123456</span><ion-button fill="clear" size="small">📄</ion-button></div>
           </div>
         </ion-accordion>
 
         <ion-accordion value="links">
-          <ion-item slot="header">
-            <ion-label><strong>🔗 Ссылки</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>🔗 Ссылки</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <ion-list>
               <ion-item-sliding v-for="link in tripLinks" :key="link.id">
@@ -119,16 +91,12 @@
                 </ion-item-options>
               </ion-item-sliding>
             </ion-list>
-            <ion-button fill="outline" expand="block" size="small" class="ion-margin-top" @click="showAddLink = true">
-              + Добавить ссылку
-            </ion-button>
+            <ion-button fill="outline" expand="block" size="small" class="ion-margin-top" @click="showAddLink = true">+ Добавить ссылку</ion-button>
           </div>
         </ion-accordion>
 
         <ion-accordion value="phrases">
-          <ion-item slot="header">
-            <ion-label><strong>💬 Разговорник: турецкий</strong></ion-label>
-          </ion-item>
+          <ion-item slot="header"><ion-label><strong>💬 Разговорник: турецкий</strong></ion-label></ion-item>
           <div slot="content" class="accordion-content">
             <div v-for="(phrase, i) in info.phrases" :key="i" class="phrase-row">
               <span class="phrase-ru">{{ phrase.ru }}</span>
@@ -139,49 +107,47 @@
         </ion-accordion>
       </ion-accordion-group>
 
-      <!-- Participants -->
-      <div class="section-header">👥 Участники ({{ trip?.members.length }})</div>
+      <!-- Participants with wallets -->
+      <div class="section-header">👥 Участники ({{ activeMembers.length }})</div>
       <ion-list>
-        <ion-item v-for="m in trip?.members" :key="m.userId">
-          <ion-avatar slot="start" class="member-avatar">
-            <div class="avatar-letter">{{ store.getUserName(m.userId)[0] }}</div>
-          </ion-avatar>
+        <ion-item v-for="m in activeMembers" :key="m.userId">
+          <ion-avatar slot="start" class="member-avatar"><div class="avatar-letter">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
           <ion-label>
-            <h3>{{ store.getUserName(m.userId) }}</h3>
+            <h3>
+              {{ store.getUserName(m.userId) }}
+              <span v-if="getWalletName(m.userId)" class="wallet-badge">{{ getWalletName(m.userId) }}</span>
+            </h3>
             <p>{{ m.role === 'organizer' ? '👑 Организатор' : 'Участник' }}</p>
           </ion-label>
         </ion-item>
       </ion-list>
 
-      <ion-button fill="outline" expand="block" class="ion-margin" @click="showPdfAlert = true">
-        📤 Экспорт в PDF
-      </ion-button>
+      <template v-if="leftMembers.length">
+        <div class="section-header">Вышли из поездки</div>
+        <ion-list>
+          <ion-item v-for="m in leftMembers" :key="m.userId" class="left-member-item">
+            <ion-avatar slot="start" class="member-avatar member-avatar-left"><div class="avatar-letter">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
+            <ion-label>
+              <h3>{{ store.getUserName(m.userId) }}</h3>
+              <p>Покинул(а) {{ formatDate(m.leftAt!) }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </template>
 
-      <ion-alert
-        :is-open="showPdfAlert"
-        header="Экспорт в PDF"
-        message="Генерация PDF будет доступна при подключении бэкенда. Пока это прототип."
-        :buttons="['OK']"
-        @did-dismiss="showPdfAlert = false"
-      />
+      <ion-button fill="outline" expand="block" class="ion-margin" @click="showPdfAlert = true">📤 Экспорт в PDF</ion-button>
+      <ion-alert :is-open="showPdfAlert" header="Экспорт в PDF" message="Генерация PDF будет доступна при подключении бэкенда." :buttons="['OK']" @did-dismiss="showPdfAlert = false" />
     </ion-content>
 
-    <!-- Add link modal -->
     <ion-modal :is-open="showAddLink" @did-dismiss="showAddLink = false">
-      <ion-header>
-        <ion-toolbar>
-          <ion-buttons slot="start"><ion-button @click="showAddLink = false">Отмена</ion-button></ion-buttons>
-          <ion-title>Новая ссылка</ion-title>
-          <ion-buttons slot="end"><ion-button @click="saveLink" :disabled="!linkUrl" strong>Добавить</ion-button></ion-buttons>
-        </ion-toolbar>
-      </ion-header>
+      <ion-header><ion-toolbar>
+        <ion-buttons slot="start"><ion-button @click="showAddLink = false">Отмена</ion-button></ion-buttons>
+        <ion-title>Новая ссылка</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveLink" :disabled="!linkUrl" strong>Добавить</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
       <ion-content class="ion-padding">
-        <ion-item>
-          <ion-input v-model="linkUrl" label="URL" label-placement="floating" placeholder="https://..." />
-        </ion-item>
-        <ion-item>
-          <ion-input v-model="linkTitle" label="Название" label-placement="floating" />
-        </ion-item>
+        <ion-item><ion-input v-model="linkUrl" label="URL" label-placement="floating" placeholder="https://..." /></ion-item>
+        <ion-item><ion-input v-model="linkTitle" label="Название" label-placement="floating" /></ion-item>
         <ion-item>
           <ion-select v-model="linkCategory" label="Категория" label-placement="floating">
             <ion-select-option value="Жильё">🏨 Жильё</ion-select-option>
@@ -193,14 +159,7 @@
       </ion-content>
     </ion-modal>
 
-    <!-- Delete link confirm -->
-    <ion-alert
-      :is-open="showDeleteLinkAlert"
-      header="Удалить ссылку?"
-      :message="'«' + deletingLinkTitle + '» будет удалена.'"
-      :buttons="deleteLinkButtons"
-      @did-dismiss="showDeleteLinkAlert = false"
-    />
+    <ion-alert :is-open="showDeleteLinkAlert" header="Удалить ссылку?" :message="'«' + deletingLinkTitle + '» будет удалена.'" :buttons="deleteLinkButtons" @did-dismiss="showDeleteLinkAlert = false" />
   </ion-page>
 </template>
 
@@ -225,6 +184,8 @@ const auth = useAuthStore()
 const tripId = computed(() => route.params.tripId as string)
 const trip = computed(() => store.trips.find(t => t.id === tripId.value))
 const tripLinks = computed(() => store.getTripLinks(tripId.value))
+const activeMembers = computed(() => store.getActiveMembers(tripId.value))
+const leftMembers = computed(() => store.getLeftMembers(tripId.value))
 const info = turkeyInfo
 
 const allTasks = computed(() => store.getTripTasks(tripId.value))
@@ -245,7 +206,6 @@ const linkUrl = ref('')
 const linkTitle = ref('')
 const linkCategory = ref('Другое')
 
-// Delete link
 const showDeleteLinkAlert = ref(false)
 const deletingLinkId = ref('')
 const deletingLinkTitle = ref('')
@@ -253,6 +213,11 @@ const deleteLinkButtons = computed(() => [
   { text: 'Отмена', role: 'cancel' },
   { text: 'Удалить', role: 'destructive', handler: () => { store.deleteLink(deletingLinkId.value) } },
 ])
+
+function getWalletName(userId: string) {
+  const w = store.getWalletForUser(tripId.value, userId)
+  return w?.name ?? null
+}
 
 function confirmDeleteLink(link: Link) {
   deletingLinkId.value = link.id
@@ -266,46 +231,35 @@ function pluralDays(n: number) {
   return 'дней'
 }
 
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  const months = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 function saveLink() {
   if (!linkUrl.value) return
   store.addLink(tripId.value, linkUrl.value, linkTitle.value, linkCategory.value, auth.user?.id ?? '')
-  showAddLink.value = false
-  linkUrl.value = ''
-  linkTitle.value = ''
+  showAddLink.value = false; linkUrl.value = ''; linkTitle.value = ''
 }
 </script>
 
 <style scoped>
-.countdown-number {
-  font-size: 48px; font-weight: 800; color: var(--ion-color-primary);
-  line-height: 1.1; margin: 8px 0;
-}
+.countdown-number { font-size: 48px; font-weight: 800; color: var(--ion-color-primary); line-height: 1.1; margin: 8px 0; }
 .accordion-content { padding: 8px 16px 16px; }
-.info-row {
-  display: flex; justify-content: space-between; padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6; font-size: 14px; gap: 12px;
-}
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px; gap: 12px; }
 .info-label { color: #6B7280; min-width: 100px; flex-shrink: 0; }
-.doc-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px;
-}
+.doc-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F3F4F6; font-size: 14px; }
 .link-ion-item { --padding-start: 0; --inner-padding-end: 0; }
 .link-title-a { color: var(--ion-color-primary); text-decoration: none; font-size: 14px; }
 .link-meta-text { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
-.link-category {
-  background: #EEF2FF; color: var(--ion-color-primary);
-  padding: 1px 6px; border-radius: 4px; font-size: 11px;
-}
-.phrase-row {
-  display: flex; align-items: center; padding: 8px 0;
-  border-bottom: 1px solid #F3F4F6; gap: 8px;
-}
+.link-category { background: #EEF2FF; color: var(--ion-color-primary); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+.phrase-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #F3F4F6; gap: 8px; }
 .phrase-ru { flex: 1; font-size: 14px; color: #1F2937; }
 .phrase-local { flex: 1; font-size: 14px; font-weight: 600; color: var(--ion-color-primary); }
 .member-avatar { --border-radius: 50%; width: 36px; height: 36px; }
-.avatar-letter {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  background: var(--ion-color-primary); color: white; font-weight: 700; font-size: 16px; border-radius: 50%;
-}
+.member-avatar-left { opacity: 0.4; }
+.avatar-letter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--ion-color-primary); color: white; font-weight: 700; font-size: 16px; border-radius: 50%; }
+.wallet-badge { font-size: 11px; background: #EEF2FF; color: var(--ion-color-primary); padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 400; }
+.left-member-item { opacity: 0.5; }
 </style>

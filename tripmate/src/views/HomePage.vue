@@ -77,7 +77,7 @@ const store = useTripsStore()
 const auth = useAuthStore()
 
 function openTrip(tripId: string) {
-  router.push(`/trip/${tripId}/chat`)
+  router.push(`/trip/${tripId}/main`)
 }
 
 function handleLogout() {
