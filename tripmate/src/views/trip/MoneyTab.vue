@@ -1,0 +1,292 @@
+<template>
+  <ion-page>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Деньги</ion-title>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-segment v-model="tab">
+          <ion-segment-button value="shared">👥 Общие</ion-segment-button>
+          <ion-segment-button value="personal">👤 Личные</ion-segment-button>
+          <ion-segment-button value="fund">🏦 Фонд</ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <!-- Shared expenses -->
+      <template v-if="tab === 'shared'">
+        <div class="stat-card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="stat-label">Общие траты</div>
+              <div class="stat-value">{{ totalShared.toLocaleString() }} ₽</div>
+            </div>
+            <div style="text-align:right">
+              <div class="stat-label">На человека</div>
+              <div class="stat-value">~{{ perPerson.toLocaleString() }} ₽</div>
+            </div>
+          </div>
+          <div v-if="trip?.budget" style="margin-top:12px">
+            <div class="progress-bar">
+              <div class="progress-bar-fill" :class="budgetBarClass" :style="{ width: budgetPct + '%' }" />
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#6B7280">
+              <span>{{ budgetPct }}% бюджета</span>
+              <span>Осталось: {{ (trip.budget - totalShared).toLocaleString() }} ₽</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">Кто → Кому</div>
+        <ion-list>
+          <ion-item v-for="t in transfers" :key="`${t.from}-${t.to}`">
+            <ion-label>
+              <h3>{{ store.getUserName(t.from) }} → {{ store.getUserName(t.to) }}</h3>
+            </ion-label>
+            <ion-badge slot="end" color="warning">{{ t.amount.toLocaleString() }} ₽</ion-badge>
+          </ion-item>
+          <ion-item v-if="!transfers.length">
+            <ion-label color="medium">Все расчёты завершены ✓</ion-label>
+          </ion-item>
+        </ion-list>
+
+        <div class="section-header">По категориям</div>
+        <div class="stat-card">
+          <div v-for="cat in categoryStats" :key="cat.key" class="category-row">
+            <span class="category-icon">{{ cat.icon }}</span>
+            <span class="category-name">{{ cat.name }}</span>
+            <span class="category-amount">{{ cat.amount.toLocaleString() }} ₽</span>
+            <span class="category-pct">{{ cat.percent }}%</span>
+          </div>
+        </div>
+
+        <div class="section-header">Депозиты / Залоги</div>
+        <ion-list>
+          <ion-item v-for="d in deposits" :key="d.id">
+            <ion-icon :icon="lockClosedOutline" slot="start" color="warning" />
+            <ion-label>
+              <h3>{{ d.title }}</h3>
+              <p>{{ store.getUserName(d.paidBy[0]?.userId ?? '') }} · {{ depositStatusText(d.depositStatus) }}</p>
+            </ion-label>
+            <ion-note slot="end">{{ d.amount.toLocaleString() }} ₽</ion-note>
+          </ion-item>
+          <ion-item v-if="!deposits.length">
+            <ion-label color="medium">Нет залогов</ion-label>
+          </ion-item>
+        </ion-list>
+
+        <div class="section-header">История трат</div>
+        <ion-list>
+          <ion-item v-for="exp in sharedExpenses" :key="exp.id" button>
+            <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
+            <ion-label>
+              <h3>{{ exp.title }}</h3>
+              <p>{{ store.getUserName(exp.createdBy) }} · {{ formatDate(exp.createdAt) }}</p>
+            </ion-label>
+            <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
+          </ion-item>
+        </ion-list>
+      </template>
+
+      <!-- Personal expenses -->
+      <template v-if="tab === 'personal'">
+        <div class="stat-card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="stat-label">Общие (доля)</div>
+              <div class="stat-value">{{ myShare.toLocaleString() }} ₽</div>
+            </div>
+            <div style="text-align:right">
+              <div class="stat-label">Личные</div>
+              <div class="stat-value">{{ totalPersonal.toLocaleString() }} ₽</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E5E7EB;display:flex;justify-content:space-between">
+            <span style="font-weight:700;font-size:16px">Итого за поездку</span>
+            <span style="font-weight:700;font-size:18px;color:var(--ion-color-primary)">{{ (myShare + totalPersonal).toLocaleString() }} ₽</span>
+          </div>
+        </div>
+
+        <div class="section-header">Мои личные траты</div>
+        <ion-list>
+          <ion-item v-for="exp in personalExpenses" :key="exp.id">
+            <span slot="start" class="emoji-icon">{{ categoryIcon(exp.category) }}</span>
+            <ion-label>
+              <h3>{{ exp.title }}</h3>
+              <p>{{ formatDate(exp.createdAt) }}</p>
+            </ion-label>
+            <ion-note slot="end">{{ exp.amount.toLocaleString() }} ₽</ion-note>
+          </ion-item>
+          <ion-item v-if="!personalExpenses.length">
+            <ion-label color="medium">Нет личных трат</ion-label>
+          </ion-item>
+        </ion-list>
+      </template>
+
+      <!-- Fund -->
+      <template v-if="tab === 'fund'">
+        <template v-if="tripFund">
+          <div class="stat-card">
+            <div class="stat-label">Общий фонд</div>
+            <div class="stat-value">{{ tripFund.totalCollected.toLocaleString() }} ₽</div>
+            <div class="progress-bar" style="margin:8px 0">
+              <div class="progress-bar-fill" :style="{ width: fundSpentPct + '%' }" />
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#6B7280">
+              <span>Потрачено: {{ tripFund.totalSpent.toLocaleString() }} ₽</span>
+              <span>Остаток: {{ (tripFund.totalCollected - tripFund.totalSpent).toLocaleString() }} ₽</span>
+            </div>
+          </div>
+
+          <div class="section-header">Взносы</div>
+          <ion-list>
+            <ion-item v-for="c in tripFund.contributions" :key="c.userId">
+              <ion-label>
+                <h3>{{ store.getUserName(c.userId) }}</h3>
+                <p>{{ c.paidAmount.toLocaleString() }} / {{ c.expectedAmount.toLocaleString() }} ₽</p>
+              </ion-label>
+              <ion-badge slot="end" :color="contributionColor(c.status)">
+                {{ contributionStatusText(c.status) }}
+              </ion-badge>
+            </ion-item>
+          </ion-list>
+        </template>
+        <div v-else class="empty-state">
+          <p>Общий фонд не создан</p>
+          <ion-button>Создать фонд</ion-button>
+        </div>
+      </template>
+    </ion-content>
+  </ion-page>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSegment, IonSegmentButton,
+  IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton,
+} from '@ionic/vue'
+import { lockClosedOutline } from 'ionicons/icons'
+import { useTripsStore } from '../../stores/trips'
+import { useAuthStore } from '../../stores/auth'
+import type { ExpenseCategory, DepositStatus } from '../../types'
+
+const route = useRoute()
+const store = useTripsStore()
+const auth = useAuthStore()
+const tab = ref('shared')
+
+const tripId = computed(() => route.params.tripId as string)
+const trip = computed(() => store.trips.find(t => t.id === tripId.value))
+const sharedExpenses = computed(() => store.getSharedExpenses(tripId.value))
+const personalExpenses = computed(() => store.getPersonalExpenses(tripId.value, auth.user?.id ?? ''))
+const deposits = computed(() => store.getDeposits(tripId.value))
+const tripFund = computed(() => store.getTripFund(tripId.value))
+
+const totalShared = computed(() => sharedExpenses.value.reduce((s, e) => s + e.amount, 0))
+const totalPersonal = computed(() => personalExpenses.value.reduce((s, e) => s + e.amount, 0))
+const memberCount = computed(() => trip.value?.members.length ?? 1)
+const perPerson = computed(() => Math.round(totalShared.value / memberCount.value))
+
+const myShare = computed(() => {
+  const uid = auth.user?.id ?? ''
+  return sharedExpenses.value.reduce((sum, exp) => {
+    const split = exp.splits.find(s => s.userId === uid)
+    return sum + (split?.amount ?? 0)
+  }, 0)
+})
+
+const { transfers } = store.calculateBalances(tripId.value)
+
+const budgetPct = computed(() => {
+  if (!trip.value?.budget) return 0
+  return Math.min(100, Math.round((totalShared.value / trip.value.budget) * 100))
+})
+const budgetBarClass = computed(() => {
+  if (budgetPct.value > 100) return 'danger'
+  if (budgetPct.value > 85) return 'warning'
+  return ''
+})
+
+const fundSpentPct = computed(() => {
+  if (!tripFund.value || tripFund.value.totalCollected === 0) return 0
+  return Math.round((tripFund.value.totalSpent / tripFund.value.totalCollected) * 100)
+})
+
+const categoryStats = computed(() => {
+  const cats: Record<string, { icon: string; name: string; amount: number }> = {
+    housing: { icon: '🏨', name: 'Жильё', amount: 0 },
+    transport: { icon: '🚗', name: 'Транспорт', amount: 0 },
+    food: { icon: '🍽', name: 'Еда', amount: 0 },
+    fun: { icon: '🎭', name: 'Развлечения', amount: 0 },
+    shopping: { icon: '🛍', name: 'Покупки', amount: 0 },
+    other: { icon: '📦', name: 'Другое', amount: 0 },
+  }
+  sharedExpenses.value.forEach(e => {
+    if (cats[e.category]) cats[e.category].amount += e.amount
+  })
+  return Object.entries(cats)
+    .filter(([, v]) => v.amount > 0)
+    .map(([key, v]) => ({
+      key,
+      ...v,
+      percent: totalShared.value > 0 ? Math.round((v.amount / totalShared.value) * 100) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount)
+})
+
+function categoryIcon(cat: ExpenseCategory) {
+  const icons: Record<string, string> = { housing: '🏨', transport: '🚗', food: '🍽', fun: '🎭', shopping: '🛍', other: '📦' }
+  return icons[cat] ?? '📦'
+}
+
+function depositStatusText(s?: DepositStatus) {
+  if (s === 'returned') return 'Возвращён ✅'
+  if (s === 'lost') return 'Не вернули ❌'
+  if (s === 'partial') return 'Частично'
+  return 'Ожидает ⏳'
+}
+
+function contributionColor(s: string) {
+  if (s === 'confirmed') return 'success'
+  if (s === 'paid') return 'warning'
+  return 'medium'
+}
+
+function contributionStatusText(s: string) {
+  if (s === 'confirmed') return '✅ Подтверждён'
+  if (s === 'paid') return '⏳ Ожидает'
+  return 'Не внёс'
+}
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr)
+  const months = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+  return `${d.getDate()} ${months[d.getMonth()]}`
+}
+</script>
+
+<style scoped>
+.stat-label {
+  font-size: 13px;
+  color: #6B7280;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1F2937;
+}
+.category-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  gap: 8px;
+}
+.category-icon { font-size: 20px; }
+.category-name { flex: 1; font-size: 14px; }
+.category-amount { font-weight: 600; font-size: 14px; }
+.category-pct { font-size: 13px; color: #6B7280; width: 40px; text-align: right; }
+.empty-state { text-align: center; padding: 40px 20px; color: #6B7280; }
+</style>
