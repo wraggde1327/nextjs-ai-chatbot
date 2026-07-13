@@ -154,8 +154,16 @@
         </template>
         <div v-else class="empty-state">
           <p>Общий фонд не создан</p>
-          <ion-button>Создать фонд</ion-button>
+          <ion-button @click="showFundAlert = true">Создать фонд</ion-button>
         </div>
+
+        <ion-alert
+          :is-open="showFundAlert"
+          header="Создание фонда"
+          message="Создание общего фонда будет доступно в следующей версии."
+          :buttons="['OK']"
+          @did-dismiss="showFundAlert = false"
+        />
       </template>
     </ion-content>
   </ion-page>
@@ -166,7 +174,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSegment, IonSegmentButton,
-  IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton,
+  IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton, IonAlert,
 } from '@ionic/vue'
 import { lockClosedOutline } from 'ionicons/icons'
 import { useTripsStore } from '../../stores/trips'
@@ -177,6 +185,7 @@ const route = useRoute()
 const store = useTripsStore()
 const auth = useAuthStore()
 const tab = ref('shared')
+const showFundAlert = ref(false)
 
 const tripId = computed(() => route.params.tripId as string)
 const trip = computed(() => store.trips.find(t => t.id === tripId.value))
@@ -198,7 +207,7 @@ const myShare = computed(() => {
   }, 0)
 })
 
-const { transfers } = store.calculateBalances(tripId.value)
+const transfers = computed(() => store.calculateBalances(tripId.value).transfers)
 
 const budgetPct = computed(() => {
   if (!trip.value?.budget) return 0

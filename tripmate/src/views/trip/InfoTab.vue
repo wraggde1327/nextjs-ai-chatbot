@@ -146,9 +146,17 @@
         </ion-item>
       </ion-list>
 
-      <ion-button fill="outline" expand="block" class="ion-margin">
+      <ion-button fill="outline" expand="block" class="ion-margin" @click="showPdfAlert = true">
         📤 Экспорт в PDF
       </ion-button>
+
+      <ion-alert
+        :is-open="showPdfAlert"
+        header="Экспорт в PDF"
+        message="Генерация PDF будет доступна при подключении бэкенда. Пока это прототип."
+        :buttons="['OK']"
+        @did-dismiss="showPdfAlert = false"
+      />
     </ion-content>
 
     <ion-modal :is-open="showAddLink" @did-dismiss="showAddLink = false">
@@ -189,7 +197,7 @@ import { useRoute } from 'vue-router'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
   IonAccordionGroup, IonAccordion, IonButton, IonButtons, IonAvatar, IonModal,
-  IonInput, IonSelect, IonSelectOption,
+  IonInput, IonSelect, IonSelectOption, IonAlert,
 } from '@ionic/vue'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
@@ -217,6 +225,7 @@ const daysUntil = computed(() => {
 })
 
 const showAddLink = ref(false)
+const showPdfAlert = ref(false)
 const linkUrl = ref('')
 const linkTitle = ref('')
 const linkCategory = ref('Другое')

@@ -219,6 +219,40 @@ export const useTripsStore = defineStore('trips', () => {
     return link
   }
 
+  function addPoll(tripId: string, question: string, optionTexts: string[], userId: string) {
+    const poll: Poll = {
+      id: `poll-${Date.now()}`,
+      tripId,
+      question,
+      options: optionTexts.map(text => ({ text, votes: [] })),
+      createdBy: userId,
+    }
+    polls.value.push(poll)
+    messages.value.push({
+      id: `msg-${Date.now()}`,
+      tripId,
+      type: 'poll',
+      referenceId: poll.id,
+      createdBy: userId,
+      createdAt: new Date().toISOString(),
+    })
+    return poll
+  }
+
+  function addTaskFromChat(tripId: string, title: string, section: string, assigneeId: string | undefined, userId: string) {
+    const task = addTask(tripId, title, section, assigneeId, userId)
+    messages.value.push({
+      id: `msg-${Date.now()}`,
+      tripId,
+      type: 'task' as ChatMessageType,
+      referenceId: task.id,
+      text: title,
+      createdBy: userId,
+      createdAt: new Date().toISOString(),
+    })
+    return task
+  }
+
   return {
     trips, expenses, messages, events, tasks, polls, links, fund,
     activeTrips, archivedTrips,
@@ -228,5 +262,6 @@ export const useTripsStore = defineStore('trips', () => {
     getTripTasks, getTaskSections, getTripPolls, getTripLinks, getTripFund,
     calculateBalances,
     addExpense, addMessage, toggleTask, votePoll, addTask, addEvent, deleteExpense, addLink,
+    addPoll, addTaskFromChat,
   }
 })
