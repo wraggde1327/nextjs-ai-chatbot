@@ -35,7 +35,7 @@
               Через {{ countdown(trip.startDate) }} {{ pluralDays(countdown(trip.startDate)!) }}
             </template>
             <template v-else-if="isOngoing(trip.startDate, trip.endDate)">
-              Сейчас в поездке! 🌴
+              Сейчас в поездке
             </template>
           </div>
 
@@ -132,58 +132,18 @@ function budgetClass(trip: Trip) {
 .trip-card {
   border-radius: 16px;
   margin: 8px 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }
 
-.trip-card.archived {
-  opacity: 0.6;
-}
-
-.trip-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.trip-flag {
-  font-size: 36px;
-}
-
-.trip-card-info {
-  flex: 1;
-}
-
-.trip-name {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-  color: #1F2937;
-}
-
-.trip-dates {
-  font-size: 14px;
-  color: #6B7280;
-  margin: 2px 0 0;
-}
-
-.trip-badge {
-  --border-radius: 12px;
-  font-size: 12px;
-}
-
-.trip-countdown {
-  margin-top: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ion-color-primary);
-}
-
-.trip-budget {
-  margin-top: 12px;
-}
-
-.budget-text {
-  font-size: 13px;
-  color: #6B7280;
-}
+.trip-card.archived { opacity: 0.5; }
+.trip-card-header { display: flex; align-items: center; gap: 12px; }
+.trip-flag { font-size: 36px; }
+.trip-card-info { flex: 1; }
+.trip-name { font-size: 18px; font-weight: 700; margin: 0; color: var(--color-text-1); }
+.trip-dates { font-size: 15px; color: var(--color-text-2); margin: 2px 0 0; }
+.trip-badge { --border-radius: 12px; font-size: 12px; }
+.trip-countdown { margin-top: 12px; font-size: 15px; font-weight: 700; color: var(--color-accent); }
+.trip-budget { margin-top: 12px; }
+.budget-text { font-size: 12px; color: var(--color-text-2); font-variant-numeric: tabular-nums; }
 </style>

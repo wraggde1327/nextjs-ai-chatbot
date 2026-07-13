@@ -19,8 +19,10 @@
       <!-- Upcoming events strip -->
       <div v-if="upcomingEvents.length" class="events-strip">
         <div class="events-strip-header">
-          <span class="events-strip-title">📅 Ближайшее</span>
-          <ion-button fill="clear" size="small" router-link="today" router-direction="forward">Всё →</ion-button>
+          <span class="events-strip-title">Ближайшее</span>
+          <ion-button fill="clear" size="small" router-link="today" router-direction="forward">
+            Всё <ion-icon :icon="chevronForwardOutline" style="margin-left:2px" />
+          </ion-button>
         </div>
         <div class="events-list">
           <div
@@ -32,41 +34,43 @@
             <div class="event-mini-time">{{ evt.time }}</div>
             <div class="event-mini-info">
               <div class="event-mini-title">{{ evt.title }}</div>
-              <div v-if="evt.location" class="event-mini-loc">📍 {{ evt.location }}</div>
+              <div v-if="evt.location" class="event-mini-loc">
+                <ion-icon :icon="locationOutline" style="font-size:11px;vertical-align:middle" /> {{ evt.location }}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-    <!-- Quick stats -->
-    <div class="quick-stats">
-      <div class="quick-stat" @click="openBudgetModal">
-        <span class="qs-icon">💰</span>
-        <template v-if="trip?.budget">
-          <span class="qs-value">{{ budgetPct }}%</span>
-          <span class="qs-label">бюджета</span>
-        </template>
-        <template v-else>
-          <span class="qs-value">+</span>
-          <span class="qs-label">бюджет</span>
-        </template>
+      <!-- Quick stats -->
+      <div class="quick-stats">
+        <div class="quick-stat" @click="openBudgetModal">
+          <ion-icon :icon="walletOutline" class="qs-icon" />
+          <template v-if="trip?.budget">
+            <span class="qs-value">{{ budgetPct }}%</span>
+            <span class="qs-label">бюджета</span>
+          </template>
+          <template v-else>
+            <span class="qs-value qs-value--add">+</span>
+            <span class="qs-label">бюджет</span>
+          </template>
+        </div>
+        <div class="quick-stat">
+          <ion-icon :icon="checkmarkCircleOutline" class="qs-icon" />
+          <span class="qs-value">{{ completedTasks }}/{{ totalTasks }}</span>
+          <span class="qs-label">дел</span>
+        </div>
+        <div class="quick-stat" v-if="transfers.length">
+          <ion-icon :icon="swapHorizontalOutline" class="qs-icon" />
+          <span class="qs-value">{{ transfers.length }}</span>
+          <span class="qs-label">{{ transfersLabel }}</span>
+        </div>
+        <div class="quick-stat" v-if="daysInfo">
+          <ion-icon :icon="calendarOutline" class="qs-icon" />
+          <span class="qs-value">{{ daysInfo.value }}</span>
+          <span class="qs-label">{{ daysInfo.label }}</span>
+        </div>
       </div>
-      <div class="quick-stat">
-        <span class="qs-icon">✅</span>
-        <span class="qs-value">{{ completedTasks }}/{{ totalTasks }}</span>
-        <span class="qs-label">дел</span>
-      </div>
-      <div class="quick-stat" v-if="transfers.length">
-        <span class="qs-icon">🔄</span>
-        <span class="qs-value">{{ transfers.length }}</span>
-        <span class="qs-label">{{ transfersLabel }}</span>
-      </div>
-      <div class="quick-stat" v-if="daysInfo">
-        <span class="qs-icon">🗓</span>
-        <span class="qs-value">{{ daysInfo.value }}</span>
-        <span class="qs-label">{{ daysInfo.label }}</span>
-      </div>
-    </div>
 
       <!-- Chat feed -->
       <div class="chat-messages">
@@ -74,68 +78,80 @@
           <div v-if="msg.type === 'system'" class="card-system">{{ msg.text }}</div>
 
           <div v-else-if="msg.type === 'expense' && getExpense(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
-            <div class="compact-card expense-card">
-              <div class="compact-row">
-                <span class="compact-icon">💰</span>
-                <span class="compact-title">{{ getExpense(msg.referenceId)!.title }}</span>
-                <span class="compact-amount">{{ getExpense(msg.referenceId)!.amount.toLocaleString() }} ₽</span>
-              </div>
-              <div class="compact-meta">
-                {{ store.getUserName(msg.createdBy) }} · {{ getExpenseSplitText(getExpense(msg.referenceId)!) }}
-                <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+            <div class="compact-card cc-expense">
+              <div class="cc-indicator cc-indicator--expense" />
+              <div class="cc-body">
+                <div class="compact-row">
+                  <ion-icon :icon="categoryIconFor(getExpense(msg.referenceId)!.category)" class="cc-icon" />
+                  <span class="compact-title">{{ getExpense(msg.referenceId)!.title }}</span>
+                  <span class="compact-amount num">{{ getExpense(msg.referenceId)!.amount.toLocaleString() }} ₽</span>
+                </div>
+                <div class="compact-meta">
+                  {{ store.getUserName(msg.createdBy) }} · {{ getExpenseSplitText(getExpense(msg.referenceId)!) }}
+                  <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div v-else-if="msg.type === 'event' && getEvent(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
-            <div class="compact-card event-card">
-              <div class="compact-row">
-                <span class="compact-icon">📅</span>
-                <span class="compact-title">{{ getEvent(msg.referenceId)!.title }}</span>
-                <span class="compact-amount">{{ getEvent(msg.referenceId)!.time }}</span>
-              </div>
-              <div class="compact-meta">
-                {{ formatEventDate(getEvent(msg.referenceId)!.date) }}
-                <template v-if="getEvent(msg.referenceId)!.location"> · 📍 {{ getEvent(msg.referenceId)!.location }}</template>
-                <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+            <div class="compact-card cc-event">
+              <div class="cc-indicator cc-indicator--event" />
+              <div class="cc-body">
+                <div class="compact-row">
+                  <ion-icon :icon="calendarOutline" class="cc-icon" />
+                  <span class="compact-title">{{ getEvent(msg.referenceId)!.title }}</span>
+                  <span class="compact-amount">{{ getEvent(msg.referenceId)!.time }}</span>
+                </div>
+                <div class="compact-meta">
+                  {{ formatEventDate(getEvent(msg.referenceId)!.date) }}
+                  <template v-if="getEvent(msg.referenceId)!.location"> · {{ getEvent(msg.referenceId)!.location }}</template>
+                  <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div v-else-if="msg.type === 'poll' && getPoll(msg.referenceId)" class="chat-card-wrapper">
-            <div class="compact-card poll-card">
-              <div class="compact-row" @click="openCardActions(msg)">
-                <span class="compact-icon">📊</span>
-                <span class="compact-title">{{ getPoll(msg.referenceId)!.question }}</span>
-              </div>
-              <div class="poll-options">
-                <div
-                  v-for="(opt, i) in getPoll(msg.referenceId)!.options" :key="i"
-                  class="poll-option" :class="{ voted: opt.votes.includes(currentUserId) }"
-                  @click="handleVote(msg.referenceId!, i)"
-                >
-                  <div class="poll-option-bar" :style="{ width: pollPercent(msg.referenceId!, i) + '%' }" />
-                  <span class="poll-option-text">{{ opt.text }}</span>
-                  <span class="poll-option-count">{{ opt.votes.length }}</span>
+            <div class="compact-card cc-poll">
+              <div class="cc-indicator cc-indicator--poll" />
+              <div class="cc-body">
+                <div class="compact-row" @click="openCardActions(msg)">
+                  <ion-icon :icon="statsChartOutline" class="cc-icon" />
+                  <span class="compact-title">{{ getPoll(msg.referenceId)!.question }}</span>
                 </div>
-              </div>
-              <div class="compact-meta">
-                {{ store.getUserName(msg.createdBy) }}
-                <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+                <div class="poll-options">
+                  <div
+                    v-for="(opt, i) in getPoll(msg.referenceId)!.options" :key="i"
+                    class="poll-option" :class="{ voted: opt.votes.includes(currentUserId) }"
+                    @click="handleVote(msg.referenceId!, i)"
+                  >
+                    <div class="poll-option-bar" :style="{ width: pollPercent(msg.referenceId!, i) + '%' }" />
+                    <span class="poll-option-text">{{ opt.text }}</span>
+                    <span class="poll-option-count">{{ opt.votes.length }}</span>
+                  </div>
+                </div>
+                <div class="compact-meta">
+                  {{ store.getUserName(msg.createdBy) }}
+                  <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div v-else-if="msg.type === 'task' && getTask(msg.referenceId)" class="chat-card-wrapper" @click="openCardActions(msg)">
-            <div class="compact-card task-card">
-              <div class="compact-row">
-                <span class="compact-icon">{{ getTask(msg.referenceId)!.isCompleted ? '✅' : '☑️' }}</span>
-                <span class="compact-title" :class="{ 'task-done': getTask(msg.referenceId)!.isCompleted }">{{ getTask(msg.referenceId)!.title }}</span>
-              </div>
-              <div class="compact-meta">
-                {{ store.getUserName(msg.createdBy) }}
-                <template v-if="getTask(msg.referenceId)!.assigneeId"> · 👤 {{ store.getUserName(getTask(msg.referenceId)!.assigneeId!) }}</template>
-                <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+            <div class="compact-card cc-task">
+              <div class="cc-indicator cc-indicator--task" />
+              <div class="cc-body">
+                <div class="compact-row">
+                  <ion-icon :icon="getTask(msg.referenceId)!.isCompleted ? checkmarkCircle : ellipseOutline" class="cc-icon" :color="getTask(msg.referenceId)!.isCompleted ? 'success' : 'medium'" />
+                  <span class="compact-title" :class="{ 'task-done': getTask(msg.referenceId)!.isCompleted }">{{ getTask(msg.referenceId)!.title }}</span>
+                </div>
+                <div class="compact-meta">
+                  {{ store.getUserName(msg.createdBy) }}
+                  <template v-if="getTask(msg.referenceId)!.assigneeId"> · {{ store.getUserName(getTask(msg.referenceId)!.assigneeId!) }}</template>
+                  <span class="compact-time">{{ formatTime(msg.createdAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -163,10 +179,18 @@
           </ion-button>
         </div>
         <div v-if="showActions" class="quick-actions">
-          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddExpense">💰 Трата</ion-button>
-          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddEvent">📅 Событие</ion-button>
-          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddPoll">📊 Опрос</ion-button>
-          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddTask">✅ Задача</ion-button>
+          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddExpense">
+            <ion-icon :icon="cashOutline" slot="start" /> Трата
+          </ion-button>
+          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddEvent">
+            <ion-icon :icon="calendarOutline" slot="start" /> Событие
+          </ion-button>
+          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddPoll">
+            <ion-icon :icon="statsChartOutline" slot="start" /> Опрос
+          </ion-button>
+          <ion-button size="small" class="quick-action-btn" fill="outline" @click="openAddTask">
+            <ion-icon :icon="checkmarkCircleOutline" slot="start" /> Задача
+          </ion-button>
         </div>
       </ion-toolbar>
     </ion-footer>
@@ -183,18 +207,18 @@
         <ion-item><ion-input v-model.number="expenseAmount" label="Сумма (₽)" label-placement="floating" type="number" placeholder="0" inputmode="numeric" /></ion-item>
         <ion-item>
           <ion-select v-model="expenseCategory" label="Категория" label-placement="floating" interface="action-sheet">
-            <ion-select-option value="food">🍽 Еда</ion-select-option>
-            <ion-select-option value="transport">🚗 Транспорт</ion-select-option>
-            <ion-select-option value="housing">🏨 Жильё</ion-select-option>
-            <ion-select-option value="fun">🎭 Развлечения</ion-select-option>
-            <ion-select-option value="shopping">🛍 Покупки</ion-select-option>
-            <ion-select-option value="other">📦 Другое</ion-select-option>
+            <ion-select-option value="food">Еда</ion-select-option>
+            <ion-select-option value="transport">Транспорт</ion-select-option>
+            <ion-select-option value="housing">Жильё</ion-select-option>
+            <ion-select-option value="fun">Развлечения</ion-select-option>
+            <ion-select-option value="shopping">Покупки</ion-select-option>
+            <ion-select-option value="other">Другое</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item>
           <ion-select v-model="expenseType" label="Тип" label-placement="floating" interface="action-sheet">
-            <ion-select-option value="shared">👥 Общая</ion-select-option>
-            <ion-select-option value="personal">👤 Личная</ion-select-option>
+            <ion-select-option value="shared">Общая</ion-select-option>
+            <ion-select-option value="personal">Личная</ion-select-option>
           </ion-select>
         </ion-item>
         <template v-if="expenseType === 'shared'">
@@ -204,7 +228,7 @@
             <ion-segment-button value="select"><ion-label>Выбрать</ion-label></ion-segment-button>
           </ion-segment>
           <div v-if="expenseSplitMode === 'equal_all' && expenseAmount && activeMembers.length" class="split-preview">
-            👥 {{ activeMembers.length }} чел. · по {{ Math.round(expenseAmount / activeMembers.length).toLocaleString() }} ₽
+            {{ activeMembers.length }} чел. · по {{ Math.round(expenseAmount / activeMembers.length).toLocaleString() }} ₽
           </div>
           <div v-if="expenseSplitMode === 'select'" class="participants-list">
             <div v-for="m in activeMembers" :key="m.userId" class="split-member-row">
@@ -260,9 +284,13 @@
         <div class="section-header">Варианты ответов</div>
         <ion-item v-for="(_, i) in pollOptions" :key="i">
           <ion-input v-model="pollOptions[i]" :label="'Вариант ' + (i + 1)" label-placement="floating" />
-          <ion-button v-if="pollOptions.length > 2" fill="clear" slot="end" @click="pollOptions.splice(i, 1)">✕</ion-button>
+          <ion-button v-if="pollOptions.length > 2" fill="clear" slot="end" @click="pollOptions.splice(i, 1)">
+            <ion-icon :icon="closeOutline" />
+          </ion-button>
         </ion-item>
-        <ion-button v-if="pollOptions.length < 6" fill="clear" expand="block" @click="pollOptions.push('')">+ Добавить вариант</ion-button>
+        <ion-button v-if="pollOptions.length < 6" fill="clear" expand="block" @click="pollOptions.push('')">
+          <ion-icon :icon="addOutline" slot="start" /> Добавить вариант
+        </ion-button>
       </ion-content>
     </ion-modal>
 
@@ -289,48 +317,6 @@
       </ion-content>
     </ion-modal>
 
-    <!-- Members Sheet -->
-    <ion-modal :is-open="showMembersSheet" @did-dismiss="showMembersSheet = false" :initial-breakpoint="0.5" :breakpoints="[0, 0.5, 0.85]">
-      <ion-header><ion-toolbar>
-        <ion-title>Участники</ion-title>
-        <ion-buttons slot="end">
-          <ion-button @click="showAddMemberModal = true">
-            <ion-icon :icon="addCircleOutline" />
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar></ion-header>
-      <ion-content class="ion-padding">
-        <div class="section-header">Активные ({{ activeMembers.length }})</div>
-        <ion-list>
-          <ion-item v-for="m in activeMembers" :key="m.userId">
-            <ion-avatar slot="start" class="member-avatar"><div class="avatar-letter">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
-            <ion-label>
-              <h3>{{ store.getUserName(m.userId) }} <span v-if="walletName(m.userId)" class="wallet-badge">{{ walletName(m.userId) }}</span></h3>
-              <p>{{ m.role === 'organizer' ? '👑 Организатор' : 'Участник' }}</p>
-            </ion-label>
-            <ion-button v-if="m.role !== 'organizer'" fill="clear" slot="end" color="medium" @click="confirmRemoveMember(m.userId)">
-              <ion-icon :icon="removeCircleOutline" />
-            </ion-button>
-          </ion-item>
-        </ion-list>
-        <template v-if="leftMembers.length">
-          <div class="section-header">Вышли ({{ leftMembers.length }})</div>
-          <ion-list>
-            <ion-item v-for="m in leftMembers" :key="m.userId" class="left-member">
-              <ion-avatar slot="start" class="member-avatar member-avatar-left"><div class="avatar-letter">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
-              <ion-label>
-                <h3>{{ store.getUserName(m.userId) }}</h3>
-                <p>Покинул(а) {{ formatShortDate(m.leftAt!) }}</p>
-              </ion-label>
-              <ion-button fill="clear" slot="end" color="primary" @click="store.restoreMember(tripId, m.userId)">
-                <ion-icon :icon="addCircleOutline" />
-              </ion-button>
-            </ion-item>
-          </ion-list>
-        </template>
-      </ion-content>
-    </ion-modal>
-
     <!-- Budget Modal -->
     <ion-modal :is-open="showBudgetModal" @did-dismiss="showBudgetModal = false" :initial-breakpoint="0.35" :breakpoints="[0, 0.35]">
       <ion-header><ion-toolbar>
@@ -341,7 +327,7 @@
         <ion-item>
           <ion-input v-model.number="budgetInput" label="Общий бюджет (₽)" label-placement="floating" type="number" inputmode="numeric" placeholder="0" />
         </ion-item>
-        <p style="font-size:13px;color:#6B7280;padding:8px 16px">На человека: ~{{ budgetInput && activeMembers.length ? Math.round(budgetInput / activeMembers.length).toLocaleString() : '0' }} ₽</p>
+        <p style="font-size:12px;color:var(--color-text-3);padding:8px 16px">На человека: ~{{ budgetInput && activeMembers.length ? Math.round(budgetInput / activeMembers.length).toLocaleString() : '0' }} ₽</p>
         <ion-button v-if="trip?.budget" fill="clear" color="danger" expand="block" @click="clearBudget">Убрать бюджет</ion-button>
       </ion-content>
     </ion-modal>
@@ -349,13 +335,54 @@
     <!-- Add Member Modal -->
     <ion-modal :is-open="showAddMemberModal" @did-dismiss="showAddMemberModal = false" :initial-breakpoint="0.35" :breakpoints="[0, 0.35]">
       <ion-header><ion-toolbar>
-        <ion-title>Добавить участника</ion-title>
+        <ion-title>Новый участник</ion-title>
         <ion-buttons slot="end"><ion-button @click="saveNewMember" :disabled="!newMemberName.trim()" strong>Добавить</ion-button></ion-buttons>
       </ion-toolbar></ion-header>
       <ion-content class="ion-padding">
         <ion-item>
           <ion-input v-model="newMemberName" label="Имя" label-placement="floating" placeholder="Как зовут?" @keyup.enter="saveNewMember" />
         </ion-item>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Members Sheet -->
+    <ion-modal :is-open="showMembersSheet" @did-dismiss="showMembersSheet = false" :initial-breakpoint="0.5" :breakpoints="[0, 0.5, 0.85]">
+      <ion-header><ion-toolbar>
+        <ion-title>Участники</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="showAddMemberModal = true">
+            <ion-icon :icon="addOutline" />
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-list>
+          <ion-item v-for="m in activeMembers" :key="m.userId">
+            <ion-avatar slot="start" class="member-avatar"><div class="avatar-letter" :style="{ background: avatarColor(m.userId) }">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
+            <ion-label>
+              <h3>{{ store.getUserName(m.userId) }} <span v-if="walletName(m.userId)" class="wallet-badge">{{ walletName(m.userId) }}</span></h3>
+              <p>{{ m.role === 'organizer' ? 'Организатор' : 'Участник' }}</p>
+            </ion-label>
+            <ion-button v-if="m.role !== 'organizer'" fill="clear" slot="end" color="medium" @click="confirmRemoveMember(m.userId)">
+              <ion-icon :icon="removeCircleOutline" />
+            </ion-button>
+          </ion-item>
+        </ion-list>
+        <template v-if="leftMembers.length">
+          <div class="section-header">Вышли</div>
+          <ion-list>
+            <ion-item v-for="m in leftMembers" :key="m.userId" class="left-member">
+              <ion-avatar slot="start" class="member-avatar" style="opacity:0.4"><div class="avatar-letter" :style="{ background: avatarColor(m.userId) }">{{ store.getUserName(m.userId)[0] }}</div></ion-avatar>
+              <ion-label>
+                <h3>{{ store.getUserName(m.userId) }}</h3>
+                <p>Покинул(а) {{ formatShortDate(m.leftAt!) }}</p>
+              </ion-label>
+              <ion-button fill="clear" slot="end" color="primary" @click="store.restoreMember(tripId, m.userId)">
+                <ion-icon :icon="addCircleOutline" />
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </template>
       </ion-content>
     </ion-modal>
 
@@ -374,10 +401,16 @@ import {
   IonModal, IonItem, IonSelect, IonSelectOption, IonCheckbox, IonLabel, IonNote,
   IonSegment, IonSegmentButton, IonActionSheet, IonAlert, IonList, IonAvatar,
 } from '@ionic/vue'
-import { addCircleOutline, closeCircleOutline, sendOutline, peopleOutline, removeCircleOutline } from 'ionicons/icons'
+import {
+  addCircleOutline, closeCircleOutline, sendOutline, peopleOutline, removeCircleOutline,
+  addOutline, closeOutline, chevronForwardOutline, locationOutline,
+  calendarOutline, walletOutline, checkmarkCircleOutline, checkmarkCircle,
+  swapHorizontalOutline, cashOutline, statsChartOutline, ellipseOutline,
+  bedOutline, carOutline, restaurantOutline, ticketOutline, bagOutline, cubeOutline,
+} from 'ionicons/icons'
 import { useTripsStore } from '../../stores/trips'
 import { useAuthStore } from '../../stores/auth'
-import type { Expense, ChatMessage } from '../../types'
+import type { Expense, ChatMessage, ExpenseCategory } from '../../types'
 
 const route = useRoute()
 const store = useTripsStore()
@@ -433,7 +466,11 @@ const newMessage = ref('')
 const showActions = ref(false)
 const showMembersSheet = ref(false)
 
-// Expense form
+const showBudgetModal = ref(false)
+const budgetInput = ref(0)
+const showAddMemberModal = ref(false)
+const newMemberName = ref('')
+
 const showExpenseModal = ref(false)
 const editingExpenseId = ref<string | null>(null)
 const expenseTitle = ref('')
@@ -445,7 +482,6 @@ const selectedMembers = ref<string[]>([])
 const customAmounts = reactive<Record<string, number>>({})
 const customTotal = computed(() => Object.values(customAmounts).reduce((s, v) => s + (v || 0), 0))
 
-// Event form
 const showEventModal = ref(false)
 const editingEventId = ref<string | null>(null)
 const eventTitle = ref('')
@@ -453,27 +489,16 @@ const eventDate = ref('')
 const eventTime = ref('')
 const eventLocation = ref('')
 
-// Poll form
 const showPollModal = ref(false)
 const pollQuestion = ref('')
 const pollOptions = ref<string[]>(['', ''])
 
-// Task form
 const showTaskModal = ref(false)
 const editingTaskId = ref<string | null>(null)
 const taskTitle = ref('')
 const taskSection = ref('До поездки')
 const taskAssignee = ref('')
 
-// Budget
-const showBudgetModal = ref(false)
-const budgetInput = ref(0)
-
-// Add member
-const showAddMemberModal = ref(false)
-const newMemberName = ref('')
-
-// Action sheet / Delete / Remove member
 const showActionSheet = ref(false)
 const actionSheetHeader = ref('')
 const actionSheetButtons = ref<any[]>([])
@@ -482,6 +507,16 @@ const deleteConfirmButtons = ref<any[]>([])
 const showRemoveMemberAlert = ref(false)
 const removeMemberMsg = ref('')
 const removeMemberButtons = ref<any[]>([])
+
+const AVATAR_COLORS = ['#4F46E5', '#0D9488', '#D97706', '#DC2626', '#7C3AED', '#059669', '#DB2777', '#2563EB']
+function avatarColor(userId: string) {
+  let hash = 0
+  for (let i = 0; i < userId.length; i++) hash = userId.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+const CATEGORY_ICONS: Record<string, any> = { housing: bedOutline, transport: carOutline, food: restaurantOutline, fun: ticketOutline, shopping: bagOutline, other: cubeOutline }
+function categoryIconFor(cat: ExpenseCategory) { return CATEGORY_ICONS[cat] ?? cubeOutline }
 
 function getExpense(id?: string) { return id ? store.expenses.find(e => e.id === id && !e.isDeleted) : undefined }
 function getEvent(id?: string) { return id ? store.events.find(e => e.id === id) : undefined }
@@ -494,7 +529,7 @@ function walletName(userId: string) {
 }
 
 function getExpenseSplitText(exp: Expense) {
-  if (exp.type === 'personal') return '👤 Личная'
+  if (exp.type === 'personal') return 'Личная'
   const n = exp.splits.length
   if (exp.splitMode === 'equal') return `${n} чел. · по ${Math.round(exp.amount / n).toLocaleString()} ₽`
   if (exp.splitMode === 'itemized') return `По позициям · ${n} чел.`
@@ -554,39 +589,12 @@ function toggleMember(userId: string) {
   }
 }
 
-function openBudgetModal() {
-  budgetInput.value = trip.value?.budget || 0
-  showBudgetModal.value = true
-}
-
-function saveBudget() {
-  store.updateTripBudget(tripId.value, budgetInput.value || undefined)
-  showBudgetModal.value = false
-}
-
-function clearBudget() {
-  store.updateTripBudget(tripId.value, undefined)
-  showBudgetModal.value = false
-}
-
-function saveNewMember() {
-  const name = newMemberName.value.trim()
-  if (!name) return
-  store.addMember(tripId.value, name)
-  newMemberName.value = ''
-  showAddMemberModal.value = false
-}
-
-function onCustomInput(userId: string, event: Event) {
-  const val = Number((event.target as HTMLInputElement).value || 0)
-  customAmounts[userId] = val
-}
-
-function distributeEqual() {
-  if (!selectedMembers.value.length || !expenseAmount.value) return
-  const perPerson = Math.round(expenseAmount.value / selectedMembers.value.length)
-  selectedMembers.value.forEach(uid => { customAmounts[uid] = perPerson })
-}
+function openBudgetModal() { budgetInput.value = trip.value?.budget || 0; showBudgetModal.value = true }
+function saveBudget() { store.updateTripBudget(tripId.value, budgetInput.value || undefined); showBudgetModal.value = false }
+function clearBudget() { store.updateTripBudget(tripId.value, undefined); showBudgetModal.value = false }
+function saveNewMember() { const name = newMemberName.value.trim(); if (!name) return; store.addMember(tripId.value, name); newMemberName.value = ''; showAddMemberModal.value = false }
+function onCustomInput(userId: string, event: Event) { customAmounts[userId] = Number((event.target as HTMLInputElement).value || 0) }
+function distributeEqual() { if (!selectedMembers.value.length || !expenseAmount.value) return; const pp = Math.round(expenseAmount.value / selectedMembers.value.length); selectedMembers.value.forEach(uid => { customAmounts[uid] = pp }) }
 
 function confirmRemoveMember(userId: string) {
   const name = store.getUserName(userId)
@@ -598,29 +606,28 @@ function confirmRemoveMember(userId: string) {
   showRemoveMemberAlert.value = true
 }
 
-// ===== Card Actions =====
 function openCardActions(msg: ChatMessage) {
   const buttons: any[] = []
   if (msg.type === 'expense' && msg.referenceId) {
     const exp = getExpense(msg.referenceId); if (!exp) return
     actionSheetHeader.value = exp.title
-    buttons.push({ text: '✏️ Редактировать', handler: () => openEditExpense(exp) })
-    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteExpense(exp.id)) })
+    buttons.push({ text: 'Редактировать', handler: () => openEditExpense(exp) })
+    buttons.push({ text: 'Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteExpense(exp.id)) })
   } else if (msg.type === 'event' && msg.referenceId) {
     const evt = getEvent(msg.referenceId); if (!evt) return
     actionSheetHeader.value = evt.title
-    buttons.push({ text: '✏️ Редактировать', handler: () => openEditEvent(evt) })
-    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteEvent(evt.id)) })
+    buttons.push({ text: 'Редактировать', handler: () => openEditEvent(evt) })
+    buttons.push({ text: 'Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteEvent(evt.id)) })
   } else if (msg.type === 'task' && msg.referenceId) {
     const task = getTask(msg.referenceId); if (!task) return
     actionSheetHeader.value = task.title
-    buttons.push({ text: task.isCompleted ? '↩️ Вернуть' : '✅ Выполнить', handler: () => store.toggleTask(task.id, currentUserId.value) })
-    buttons.push({ text: '✏️ Редактировать', handler: () => openEditTask(task) })
-    buttons.push({ text: '🗑 Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteTask(task.id)) })
+    buttons.push({ text: task.isCompleted ? 'Вернуть' : 'Выполнить', handler: () => store.toggleTask(task.id, currentUserId.value) })
+    buttons.push({ text: 'Редактировать', handler: () => openEditTask(task) })
+    buttons.push({ text: 'Удалить', role: 'destructive', handler: () => confirmDelete(() => store.deleteTask(task.id)) })
   } else if (msg.type === 'poll' && msg.referenceId) {
     const poll = getPoll(msg.referenceId); if (!poll) return
     actionSheetHeader.value = poll.question
-    buttons.push({ text: '🗑 Удалить опрос', role: 'destructive', handler: () => confirmDelete(() => store.deletePoll(poll.id)) })
+    buttons.push({ text: 'Удалить опрос', role: 'destructive', handler: () => confirmDelete(() => store.deletePoll(poll.id)) })
   } else return
   buttons.push({ text: 'Отмена', role: 'cancel' })
   actionSheetButtons.value = buttons
@@ -635,201 +642,130 @@ function confirmDelete(action: () => void) {
   showDeleteConfirm.value = true
 }
 
-// ===== Edit =====
 function openEditExpense(exp: Expense) {
   editingExpenseId.value = exp.id; expenseTitle.value = exp.title; expenseAmount.value = exp.amount
   expenseCategory.value = exp.category; expenseType.value = exp.type
   Object.keys(customAmounts).forEach(k => delete customAmounts[k])
-  if (exp.type === 'personal') {
-    expenseSplitMode.value = 'equal_all'; selectedMembers.value = []
-  } else if (exp.splitMode === 'equal' && exp.splits.length === activeMembers.value.length) {
-    expenseSplitMode.value = 'equal_all'; selectedMembers.value = []
-  } else {
-    expenseSplitMode.value = 'select'
-    selectedMembers.value = exp.splits.map(s => s.userId)
-    exp.splits.forEach(s => { customAmounts[s.userId] = s.amount })
-  }
+  if (exp.type === 'personal') { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
+  else if (exp.splitMode === 'equal' && exp.splits.length === activeMembers.value.length) { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
+  else { expenseSplitMode.value = 'select'; selectedMembers.value = exp.splits.map(s => s.userId); exp.splits.forEach(s => { customAmounts[s.userId] = s.amount }) }
   showExpenseModal.value = true
 }
 function openEditEvent(evt: { id: string; title: string; date: string; time: string; location?: string }) {
-  editingEventId.value = evt.id; eventTitle.value = evt.title; eventDate.value = evt.date; eventTime.value = evt.time; eventLocation.value = evt.location ?? ''
-  showEventModal.value = true
+  editingEventId.value = evt.id; eventTitle.value = evt.title; eventDate.value = evt.date; eventTime.value = evt.time; eventLocation.value = evt.location ?? ''; showEventModal.value = true
 }
 function openEditTask(task: { id: string; title: string; section: string; assigneeId?: string }) {
-  editingTaskId.value = task.id; taskTitle.value = task.title; taskSection.value = task.section; taskAssignee.value = task.assigneeId ?? ''
-  showTaskModal.value = true
+  editingTaskId.value = task.id; taskTitle.value = task.title; taskSection.value = task.section; taskAssignee.value = task.assigneeId ?? ''; showTaskModal.value = true
 }
 
-// ===== Create / Open =====
-function sendMessage() {
-  const text = newMessage.value.trim(); if (!text) return
-  store.addMessage(tripId.value, text, currentUserId.value)
-  newMessage.value = ''; showActions.value = false; scrollToBottom()
-}
-function openAddExpense() {
-  showActions.value = false; editingExpenseId.value = null; expenseTitle.value = ''; expenseAmount.value = 0
-  expenseCategory.value = 'food'; expenseType.value = 'shared'; expenseSplitMode.value = 'equal_all'
-  selectedMembers.value = []
-  Object.keys(customAmounts).forEach(k => delete customAmounts[k])
-  showExpenseModal.value = true
-}
+function sendMessage() { const text = newMessage.value.trim(); if (!text) return; store.addMessage(tripId.value, text, currentUserId.value); newMessage.value = ''; showActions.value = false; scrollToBottom() }
+function openAddExpense() { showActions.value = false; editingExpenseId.value = null; expenseTitle.value = ''; expenseAmount.value = 0; expenseCategory.value = 'food'; expenseType.value = 'shared'; expenseSplitMode.value = 'equal_all'; selectedMembers.value = []; Object.keys(customAmounts).forEach(k => delete customAmounts[k]); showExpenseModal.value = true }
 function openAddEvent() { showActions.value = false; editingEventId.value = null; eventTitle.value = ''; eventDate.value = ''; eventTime.value = ''; eventLocation.value = ''; showEventModal.value = true }
 function openAddPoll() { showActions.value = false; pollQuestion.value = ''; pollOptions.value = ['', '']; showPollModal.value = true }
 function openAddTask() { showActions.value = false; editingTaskId.value = null; taskTitle.value = ''; taskSection.value = sections.value[0] || 'До поездки'; taskAssignee.value = ''; showTaskModal.value = true }
 
-// ===== Save =====
 function saveExpense() {
   if (!expenseTitle.value || !expenseAmount.value) return
   const members = activeMembers.value
   const isPersonal = expenseType.value === 'personal'
   let splits: { userId: string; amount: number }[]; let splitMode: 'equal' | 'selected' | 'custom' = 'equal'
-
-  if (isPersonal) {
-    splits = [{ userId: currentUserId.value, amount: expenseAmount.value }]
-  } else if (expenseSplitMode.value === 'select') {
+  if (isPersonal) { splits = [{ userId: currentUserId.value, amount: expenseAmount.value }] }
+  else if (expenseSplitMode.value === 'select') {
     const sel = selectedMembers.value.length > 0 ? selectedMembers.value : members.map(m => m.userId)
-    const allEqual = sel.every(uid => customAmounts[uid] === customAmounts[sel[0]])
     const perPerson = Math.round(expenseAmount.value / sel.length)
     const allEqualToAvg = sel.every(uid => (customAmounts[uid] || 0) === perPerson)
-
-    if (allEqual || allEqualToAvg) {
-      splitMode = sel.length === members.length ? 'equal' : 'selected'
-      splits = sel.map(uid => ({ userId: uid, amount: perPerson }))
-    } else {
-      splitMode = 'custom'
-      splits = sel.filter(uid => (customAmounts[uid] || 0) > 0).map(uid => ({ userId: uid, amount: customAmounts[uid] || 0 }))
-    }
-  } else {
-    splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) }))
-  }
-
-  if (editingExpenseId.value) {
-    store.updateExpense(editingExpenseId.value, { title: expenseTitle.value, amount: expenseAmount.value, category: expenseCategory.value as any, type: expenseType.value as any, splitMode, splits })
-  } else {
-    store.addExpense({ tripId: tripId.value, title: expenseTitle.value, amount: expenseAmount.value, currency: '₽', category: expenseCategory.value as any, type: expenseType.value as any, splitMode, source: 'personal_payment', paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }], splits, createdBy: currentUserId.value })
-  }
+    if (allEqualToAvg) { splitMode = sel.length === members.length ? 'equal' : 'selected'; splits = sel.map(uid => ({ userId: uid, amount: perPerson })) }
+    else { splitMode = 'custom'; splits = sel.filter(uid => (customAmounts[uid] || 0) > 0).map(uid => ({ userId: uid, amount: customAmounts[uid] || 0 })) }
+  } else { splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) })) }
+  if (editingExpenseId.value) { store.updateExpense(editingExpenseId.value, { title: expenseTitle.value, amount: expenseAmount.value, category: expenseCategory.value as any, type: expenseType.value as any, splitMode, splits }) }
+  else { store.addExpense({ tripId: tripId.value, title: expenseTitle.value, amount: expenseAmount.value, currency: '₽', category: expenseCategory.value as any, type: expenseType.value as any, splitMode, source: 'personal_payment', paidBy: [{ userId: currentUserId.value, amount: expenseAmount.value }], splits, createdBy: currentUserId.value }) }
   showExpenseModal.value = false; scrollToBottom()
 }
 
-function saveEvent() {
-  if (!eventTitle.value || !eventDate.value || !eventTime.value) return
-  if (editingEventId.value) store.updateEvent(editingEventId.value, { title: eventTitle.value, date: eventDate.value, time: eventTime.value, location: eventLocation.value || undefined })
-  else store.addEvent(tripId.value, eventTitle.value, eventDate.value, eventTime.value, eventLocation.value, currentUserId.value)
-  showEventModal.value = false; scrollToBottom()
-}
-
-function savePoll() {
-  const validOptions = pollOptions.value.filter(o => o.trim())
-  if (!pollQuestion.value || validOptions.length < 2) return
-  store.addPoll(tripId.value, pollQuestion.value, validOptions, currentUserId.value)
-  showPollModal.value = false; scrollToBottom()
-}
-
-function saveTask() {
-  if (!taskTitle.value) return
-  if (editingTaskId.value) store.updateTask(editingTaskId.value, { title: taskTitle.value, section: taskSection.value, assigneeId: taskAssignee.value || undefined })
-  else store.addTaskFromChat(tripId.value, taskTitle.value, taskSection.value, taskAssignee.value || undefined, currentUserId.value)
-  showTaskModal.value = false; scrollToBottom()
-}
+function saveEvent() { if (!eventTitle.value || !eventDate.value || !eventTime.value) return; if (editingEventId.value) store.updateEvent(editingEventId.value, { title: eventTitle.value, date: eventDate.value, time: eventTime.value, location: eventLocation.value || undefined }); else store.addEvent(tripId.value, eventTitle.value, eventDate.value, eventTime.value, eventLocation.value, currentUserId.value); showEventModal.value = false; scrollToBottom() }
+function savePoll() { const validOptions = pollOptions.value.filter(o => o.trim()); if (!pollQuestion.value || validOptions.length < 2) return; store.addPoll(tripId.value, pollQuestion.value, validOptions, currentUserId.value); showPollModal.value = false; scrollToBottom() }
+function saveTask() { if (!taskTitle.value) return; if (editingTaskId.value) store.updateTask(editingTaskId.value, { title: taskTitle.value, section: taskSection.value, assigneeId: taskAssignee.value || undefined }); else store.addTaskFromChat(tripId.value, taskTitle.value, taskSection.value, taskAssignee.value || undefined, currentUserId.value); showTaskModal.value = false; scrollToBottom() }
 
 function scrollToBottom() { nextTick(() => { contentRef.value?.$el?.scrollToBottom?.(300) }) }
 watch(chatMessages, () => scrollToBottom(), { deep: true })
 </script>
 
 <style scoped>
-.main-content { --background: #F3F4F6; }
+.main-content { --background: var(--color-bg); }
 
-/* Events strip */
-.events-strip { background: white; padding: 12px 16px 8px; border-bottom: 1px solid #E5E7EB; }
+.events-strip { background: var(--color-surface); padding: 12px 16px 8px; border-bottom: 1px solid var(--color-border); }
 .events-strip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.events-strip-title { font-size: 14px; font-weight: 700; color: #1F2937; }
-.events-list { display: flex; flex-direction: column; gap: 6px; }
-.event-mini {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 8px 10px; border-radius: 10px; background: #F9FAFB;
-}
-.event-mini.event-today { background: #EEF2FF; }
-.event-mini-date { font-size: 11px; font-weight: 600; color: var(--ion-color-primary); min-width: 52px; padding-top: 1px; }
-.event-mini-time { font-size: 13px; font-weight: 700; color: #1F2937; min-width: 40px; }
+.events-strip-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-3); }
+.events-list { display: flex; flex-direction: column; gap: 4px; }
+.event-mini { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--color-bg); }
+.event-mini.event-today { background: var(--color-accent-bg); }
+.event-mini-date { font-size: 11px; font-weight: 700; color: var(--color-accent); min-width: 52px; padding-top: 1px; }
+.event-mini-time { font-size: 15px; font-weight: 700; color: var(--color-text-1); min-width: 40px; }
 .event-mini-info { flex: 1; }
-.event-mini-title { font-size: 13px; font-weight: 600; color: #1F2937; }
-.event-mini-loc { font-size: 11px; color: #6B7280; margin-top: 1px; }
+.event-mini-title { font-size: 15px; font-weight: 700; color: var(--color-text-1); }
+.event-mini-loc { font-size: 12px; color: var(--color-text-2); margin-top: 1px; }
 
-/* Quick stats */
-.quick-stats {
-  display: flex; gap: 0; padding: 8px 12px;
-  background: white; border-bottom: 1px solid #E5E7EB;
-}
-.quick-stat {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  padding: 6px 4px; gap: 1px;
-}
-.qs-icon { font-size: 16px; }
-.qs-value { font-size: 15px; font-weight: 700; color: #1F2937; }
-.qs-label { font-size: 11px; color: #9CA3AF; }
+.quick-stats { display: flex; gap: 0; padding: 8px 12px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.quick-stat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; gap: 2px; cursor: pointer; }
+.qs-icon { font-size: 18px; color: var(--color-text-3); }
+.qs-value { font-size: 15px; font-weight: 700; color: var(--color-text-1); font-variant-numeric: tabular-nums; }
+.qs-value--add { color: var(--color-accent); }
+.qs-label { font-size: 11px; color: var(--color-text-3); }
 
-/* Chat */
 .chat-messages { padding: 8px 0 16px; }
 .chat-bubble-wrapper { display: flex; padding: 2px 8px; }
-.bubble-time { font-size: 11px; opacity: 0.6; text-align: right; margin-top: 2px; }
+.bubble-time { font-size: 11px; opacity: 0.5; text-align: right; margin-top: 2px; }
 .chat-card-wrapper { padding: 3px 8px; cursor: pointer; }
-.chat-card-wrapper:active .compact-card { opacity: 0.8; transform: scale(0.98); }
+.chat-card-wrapper:active .compact-card { opacity: 0.85; transform: scale(0.98); }
 
 .compact-card {
-  background: white; border-radius: 12px; padding: 10px 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-left: 4px solid #D1D5DB;
-  transition: opacity 0.15s, transform 0.15s;
+  display: flex; align-items: stretch;
+  background: var(--color-surface); border-radius: 12px;
+  border: 1px solid var(--color-border);
+  overflow: hidden; transition: opacity 0.15s, transform 0.15s;
 }
-.expense-card { border-left-color: #10B981; }
-.event-card { border-left-color: #4F46E5; }
-.poll-card { border-left-color: #F59E0B; }
-.task-card { border-left-color: #8B5CF6; }
+.cc-indicator { width: 4px; flex-shrink: 0; border-radius: 4px 0 0 4px; }
+.cc-indicator--expense { background: var(--color-success); }
+.cc-indicator--event { background: var(--color-accent); }
+.cc-indicator--poll { background: var(--color-warning); }
+.cc-indicator--task { background: #7C3AED; }
+.cc-body { flex: 1; padding: 10px 14px; }
 
 .compact-row { display: flex; align-items: center; gap: 8px; }
-.compact-icon { font-size: 16px; flex-shrink: 0; }
-.compact-title { flex: 1; font-size: 14px; font-weight: 600; color: #1F2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.compact-amount { font-size: 15px; font-weight: 700; color: var(--ion-color-primary); flex-shrink: 0; }
-.compact-meta { font-size: 12px; color: #9CA3AF; margin-top: 3px; padding-left: 24px; }
+.cc-icon { font-size: 16px; flex-shrink: 0; color: var(--color-text-2); }
+.compact-title { flex: 1; font-size: 15px; font-weight: 700; color: var(--color-text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compact-amount { font-size: 15px; font-weight: 700; color: var(--color-accent); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.compact-meta { font-size: 12px; color: var(--color-text-3); margin-top: 3px; padding-left: 24px; }
 .compact-time { float: right; }
 .task-done { text-decoration: line-through; opacity: 0.5; }
 
 .poll-options { margin: 6px 0 4px; }
-.poll-option { position: relative; padding: 8px 10px; margin: 4px 0; border-radius: 8px; background: #F3F4F6; cursor: pointer; overflow: hidden; font-size: 13px; }
-.poll-option.voted { background: #EEF2FF; }
-.poll-option-bar { position: absolute; top: 0; left: 0; height: 100%; background: rgba(79, 70, 229, 0.12); border-radius: 8px; transition: width 0.3s ease; }
+.poll-option { position: relative; padding: 8px 10px; margin: 4px 0; border-radius: 8px; background: var(--color-bg); cursor: pointer; overflow: hidden; font-size: 13px; }
+.poll-option.voted { background: var(--color-accent-bg); }
+.poll-option-bar { position: absolute; top: 0; left: 0; height: 100%; background: rgba(79, 70, 229, 0.1); border-radius: 8px; transition: width 0.3s ease; }
 .poll-option-text { position: relative; }
-.poll-option-count { position: relative; float: right; font-weight: 600; color: var(--ion-color-primary); }
+.poll-option-count { position: relative; float: right; font-weight: 700; color: var(--color-accent); }
 
-.chat-input-toolbar { --background: white; padding: 4px 0; }
+.chat-input-toolbar { --background: var(--color-surface); padding: 4px 0; }
 .chat-input-row { display: flex; align-items: center; padding: 0 4px; }
-.chat-input { flex: 1; --background: #F3F4F6; --border-radius: 20px; --padding-start: 14px; --padding-end: 14px; font-size: 15px; }
-.plus-btn { --color: var(--ion-color-primary); font-size: 24px; }
+.chat-input { flex: 1; --background: var(--color-bg); --border-radius: 20px; --padding-start: 14px; --padding-end: 14px; font-size: 15px; }
+.plus-btn { --color: var(--color-accent); font-size: 24px; }
 .quick-actions { display: flex; gap: 6px; padding: 6px 12px; overflow-x: auto; }
 
 .split-segment { margin: 8px 0; }
 .participants-list { margin: 8px 0; }
-.split-member-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px; min-height: 44px;
-}
-.split-member-name { flex: 1; font-size: 15px; font-weight: 500; color: #1F2937; }
-.split-member-off { opacity: 0.45; }
+.split-member-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px; min-height: 44px; }
+.split-member-name { flex: 1; font-size: 15px; font-weight: 400; color: var(--color-text-1); }
+.split-member-off { opacity: 0.4; }
 .split-amount-box { display: flex; align-items: center; gap: 2px; }
-.split-amount-input {
-  width: 80px; text-align: right; border: 1px solid #D1D5DB; border-radius: 8px;
-  padding: 6px 8px; font-size: 15px; font-weight: 600; color: var(--ion-color-primary);
-  background: #F9FAFB; outline: none;
-}
-.split-amount-input:focus { border-color: var(--ion-color-primary); background: white; }
-.split-amount-currency { font-size: 13px; color: #9CA3AF; }
-.split-preview { padding: 8px 16px; font-size: 13px; color: var(--ion-color-primary); font-weight: 600; }
-.split-hint { padding: 8px 16px; font-size: 13px; color: #9CA3AF; }
-.split-error { color: var(--ion-color-danger); }
+.split-amount-input { width: 80px; text-align: right; border: 1px solid var(--color-border); border-radius: 8px; padding: 6px 8px; font-size: 15px; font-weight: 700; color: var(--color-accent); background: var(--color-bg); outline: none; }
+.split-amount-input:focus { border-color: var(--color-accent); background: var(--color-surface); }
+.split-amount-currency { font-size: 12px; color: var(--color-text-3); }
+.split-preview { padding: 8px 16px; font-size: 12px; color: var(--color-accent); font-weight: 700; }
+.split-hint { padding: 8px 16px; font-size: 12px; color: var(--color-text-3); }
+.split-error { color: var(--color-danger); }
 
-/* Members */
-.member-avatar { --border-radius: 50%; width: 36px; height: 36px; }
-.member-avatar-left { opacity: 0.4; }
-.avatar-letter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--ion-color-primary); color: white; font-weight: 700; font-size: 16px; border-radius: 50%; }
-.left-member { opacity: 0.6; }
-.wallet-badge { font-size: 11px; background: #EEF2FF; color: var(--ion-color-primary); padding: 1px 6px; border-radius: 4px; margin-left: 4px; font-weight: 400; }
+.member-avatar { --border-radius: 50%; width: 32px; height: 32px; }
+.avatar-letter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-accent); color: white; font-weight: 700; font-size: 14px; border-radius: 50%; }
+.left-member { opacity: 0.5; }
 </style>

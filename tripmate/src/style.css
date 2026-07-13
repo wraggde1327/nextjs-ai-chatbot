@@ -8,33 +8,73 @@
   --ion-color-success: #10B981;
   --ion-color-warning: #F59E0B;
   --ion-color-danger: #EF4444;
-  --ion-background-color: #F9FAFB;
+  --ion-background-color: #FAFAF8;
   --ion-toolbar-background: #ffffff;
+
+  --color-bg: #FAFAF8;
+  --color-surface: #FFFFFF;
+  --color-border: #EEEEE9;
+  --color-text-1: #1A1A1A;
+  --color-text-2: #6B7280;
+  --color-text-3: #9CA3AF;
+  --color-accent: #4F46E5;
+  --color-accent-bg: #EEF2FF;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
 }
 
 ion-content {
-  --background: #F9FAFB;
+  --background: var(--color-bg);
 }
 
-.card-expense {
-  border-left: 4px solid var(--ion-color-success);
+/* Section header — quiet, lowercase feel */
+.section-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-3);
+  padding: 24px 16px 8px;
 }
 
-.card-event {
-  border-left: 4px solid var(--ion-color-primary);
+/* Stat card — no shadow, border only */
+.stat-card {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 8px 16px;
+  border: 1px solid var(--color-border);
 }
 
-.card-poll {
-  border-left: 4px solid var(--ion-color-warning);
+/* Progress bar */
+.progress-bar {
+  height: 6px;
+  background: #F0F0EB;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
 }
 
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar-fill.warning { background: var(--color-warning); }
+.progress-bar-fill.danger { background: var(--color-danger); }
+
+/* System message */
 .card-system {
   text-align: center;
-  font-size: 13px;
-  color: var(--ion-color-medium);
+  font-size: 12px;
+  color: var(--color-text-3);
   padding: 4px 0;
 }
 
+/* Chat bubbles */
 .chat-bubble {
   max-width: 85%;
   padding: 10px 14px;
@@ -45,69 +85,27 @@ ion-content {
 }
 
 .chat-bubble.mine {
-  background: var(--ion-color-primary);
+  background: var(--color-accent);
   color: white;
   margin-left: auto;
   border-bottom-right-radius: 4px;
 }
 
 .chat-bubble.other {
-  background: #E5E7EB;
-  color: #1F2937;
+  background: #EEEDE9;
+  color: var(--color-text-1);
   margin-right: auto;
   border-bottom-left-radius: 4px;
 }
 
 .chat-bubble .sender {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 2px;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
-.section-header {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--ion-color-medium);
-  padding: 16px 16px 8px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  margin: 8px 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-.balance-positive { color: var(--ion-color-success); }
-.balance-negative { color: var(--ion-color-danger); }
-
-.progress-bar {
-  height: 8px;
-  background: #E5E7EB;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 8px 0;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: var(--ion-color-primary);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.progress-bar-fill.warning { background: var(--ion-color-warning); }
-.progress-bar-fill.danger { background: var(--ion-color-danger); }
-
-.emoji-icon {
-  font-size: 20px;
-  margin-right: 8px;
-}
-
+/* Quick action buttons */
 .quick-action-btn {
   --border-radius: 20px;
   --padding-start: 12px;
@@ -116,6 +114,18 @@ ion-content {
   height: 36px;
 }
 
-.fab-menu-item {
-  margin: 4px 0;
+/* Wallet badge */
+.wallet-badge {
+  font-size: 11px;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* Tabular numbers for financial data */
+.num {
+  font-variant-numeric: tabular-nums;
 }
