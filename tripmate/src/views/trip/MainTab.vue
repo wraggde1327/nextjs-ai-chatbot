@@ -38,29 +38,35 @@
         </div>
       </div>
 
-      <!-- Quick stats -->
-      <div class="quick-stats">
-        <div class="quick-stat" v-if="trip?.budget">
-          <span class="qs-icon">💰</span>
+    <!-- Quick stats -->
+    <div class="quick-stats">
+      <div class="quick-stat" @click="openBudgetModal">
+        <span class="qs-icon">💰</span>
+        <template v-if="trip?.budget">
           <span class="qs-value">{{ budgetPct }}%</span>
           <span class="qs-label">бюджета</span>
-        </div>
-        <div class="quick-stat">
-          <span class="qs-icon">✅</span>
-          <span class="qs-value">{{ completedTasks }}/{{ totalTasks }}</span>
-          <span class="qs-label">дел</span>
-        </div>
-        <div class="quick-stat" v-if="transfers.length">
-          <span class="qs-icon">🔄</span>
-          <span class="qs-value">{{ transfers.length }}</span>
-          <span class="qs-label">{{ transfersLabel }}</span>
-        </div>
-        <div class="quick-stat" v-if="daysInfo">
-          <span class="qs-icon">🗓</span>
-          <span class="qs-value">{{ daysInfo.value }}</span>
-          <span class="qs-label">{{ daysInfo.label }}</span>
-        </div>
+        </template>
+        <template v-else>
+          <span class="qs-value">+</span>
+          <span class="qs-label">бюджет</span>
+        </template>
       </div>
+      <div class="quick-stat">
+        <span class="qs-icon">✅</span>
+        <span class="qs-value">{{ completedTasks }}/{{ totalTasks }}</span>
+        <span class="qs-label">дел</span>
+      </div>
+      <div class="quick-stat" v-if="transfers.length">
+        <span class="qs-icon">🔄</span>
+        <span class="qs-value">{{ transfers.length }}</span>
+        <span class="qs-label">{{ transfersLabel }}</span>
+      </div>
+      <div class="quick-stat" v-if="daysInfo">
+        <span class="qs-icon">🗓</span>
+        <span class="qs-value">{{ daysInfo.value }}</span>
+        <span class="qs-label">{{ daysInfo.label }}</span>
+      </div>
+    </div>
 
       <!-- Chat feed -->
       <div class="chat-messages">
@@ -194,38 +200,34 @@
         <template v-if="expenseType === 'shared'">
           <div class="section-header">Делим на</div>
           <ion-segment v-model="expenseSplitMode" class="split-segment">
-            <ion-segment-button value="equal_all"><ion-label>Все</ion-label></ion-segment-button>
-            <ion-segment-button value="equal_selected"><ion-label>Выбрать</ion-label></ion-segment-button>
-            <ion-segment-button value="custom"><ion-label>Суммы</ion-label></ion-segment-button>
+            <ion-segment-button value="equal_all"><ion-label>Все поровну</ion-label></ion-segment-button>
+            <ion-segment-button value="select"><ion-label>Выбрать</ion-label></ion-segment-button>
           </ion-segment>
           <div v-if="expenseSplitMode === 'equal_all' && expenseAmount && activeMembers.length" class="split-preview">
             👥 {{ activeMembers.length }} чел. · по {{ Math.round(expenseAmount / activeMembers.length).toLocaleString() }} ₽
           </div>
-          <div v-if="expenseSplitMode === 'equal_selected'" class="participants-list">
-            <ion-item v-for="m in activeMembers" :key="m.userId" lines="none" class="participant-item">
-              <ion-checkbox slot="start" :checked="selectedMembers.includes(m.userId)" @ion-change="toggleMember(m.userId)" />
-              <ion-label>{{ store.getUserName(m.userId) }}</ion-label>
-              <ion-note v-if="selectedMembers.includes(m.userId) && selectedMembers.length && expenseAmount" slot="end" color="primary">
-                {{ Math.round(expenseAmount / selectedMembers.length).toLocaleString() }} ₽
-              </ion-note>
-            </ion-item>
-            <div v-if="selectedMembers.length && expenseAmount" class="split-preview">
-              👥 {{ selectedMembers.length }} чел. · по {{ Math.round(expenseAmount / selectedMembers.length).toLocaleString() }} ₽
+          <div v-if="expenseSplitMode === 'select'" class="participants-list">
+            <div v-for="m in activeMembers" :key="m.userId" class="split-member-row">
+              <ion-checkbox :checked="selectedMembers.includes(m.userId)" @ion-change="toggleMember(m.userId)" />
+              <span class="split-member-name" :class="{ 'split-member-off': !selectedMembers.includes(m.userId) }">{{ store.getUserName(m.userId) }}</span>
+              <div class="split-amount-box" v-if="selectedMembers.includes(m.userId)">
+                <input
+                  type="number" inputmode="numeric" class="split-amount-input"
+                  :value="customAmounts[m.userId] ?? 0"
+                  @input="onCustomInput(m.userId, $event)"
+                />
+                <span class="split-amount-currency">₽</span>
+              </div>
             </div>
-            <div v-else-if="!selectedMembers.length" class="split-hint">Выберите участников</div>
-          </div>
-          <div v-if="expenseSplitMode === 'custom'" class="custom-amounts">
-            <ion-item v-for="m in activeMembers" :key="m.userId">
-              <ion-label>{{ store.getUserName(m.userId) }}</ion-label>
-              <ion-input slot="end" type="number" inputmode="numeric" :value="customAmounts[m.userId] || 0"
-                @ion-input="customAmounts[m.userId] = Number(($event.target as any)?.value || 0)"
-                style="text-align:right;max-width:100px" />
-              <ion-note slot="end">₽</ion-note>
-            </ion-item>
-            <div class="split-preview" :class="{ 'split-error': customTotal !== expenseAmount }">
+            <div v-if="selectedMembers.length && expenseAmount" class="split-preview" :class="{ 'split-error': customTotal !== expenseAmount }">
               Итого: {{ customTotal.toLocaleString() }} / {{ (expenseAmount || 0).toLocaleString() }} ₽
-              <template v-if="customTotal !== expenseAmount"> · Разница: {{ (expenseAmount - customTotal).toLocaleString() }} ₽</template>
+              <template v-if="customTotal === expenseAmount"> ✓</template>
+              <template v-else> · Разница: {{ (expenseAmount - customTotal).toLocaleString() }} ₽</template>
             </div>
+            <div v-if="selectedMembers.length > 1 && expenseAmount" style="padding:0 16px 4px">
+              <ion-button fill="clear" size="small" @click="distributeEqual">Поровну между выбранными</ion-button>
+            </div>
+            <div v-if="!selectedMembers.length" class="split-hint">Выберите участников</div>
           </div>
         </template>
       </ion-content>
@@ -289,7 +291,14 @@
 
     <!-- Members Sheet -->
     <ion-modal :is-open="showMembersSheet" @did-dismiss="showMembersSheet = false" :initial-breakpoint="0.5" :breakpoints="[0, 0.5, 0.85]">
-      <ion-header><ion-toolbar><ion-title>Участники</ion-title></ion-toolbar></ion-header>
+      <ion-header><ion-toolbar>
+        <ion-title>Участники</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="showAddMemberModal = true">
+            <ion-icon :icon="addCircleOutline" />
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar></ion-header>
       <ion-content class="ion-padding">
         <div class="section-header">Активные ({{ activeMembers.length }})</div>
         <ion-list>
@@ -319,6 +328,34 @@
             </ion-item>
           </ion-list>
         </template>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Budget Modal -->
+    <ion-modal :is-open="showBudgetModal" @did-dismiss="showBudgetModal = false" :initial-breakpoint="0.35" :breakpoints="[0, 0.35]">
+      <ion-header><ion-toolbar>
+        <ion-title>Бюджет поездки</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveBudget" strong>Сохранить</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input v-model.number="budgetInput" label="Общий бюджет (₽)" label-placement="floating" type="number" inputmode="numeric" placeholder="0" />
+        </ion-item>
+        <p style="font-size:13px;color:#6B7280;padding:8px 16px">На человека: ~{{ budgetInput && activeMembers.length ? Math.round(budgetInput / activeMembers.length).toLocaleString() : '0' }} ₽</p>
+        <ion-button v-if="trip?.budget" fill="clear" color="danger" expand="block" @click="clearBudget">Убрать бюджет</ion-button>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Add Member Modal -->
+    <ion-modal :is-open="showAddMemberModal" @did-dismiss="showAddMemberModal = false" :initial-breakpoint="0.35" :breakpoints="[0, 0.35]">
+      <ion-header><ion-toolbar>
+        <ion-title>Добавить участника</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveNewMember" :disabled="!newMemberName.trim()" strong>Добавить</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input v-model="newMemberName" label="Имя" label-placement="floating" placeholder="Как зовут?" @keyup.enter="saveNewMember" />
+        </ion-item>
       </ion-content>
     </ion-modal>
 
@@ -428,6 +465,14 @@ const taskTitle = ref('')
 const taskSection = ref('До поездки')
 const taskAssignee = ref('')
 
+// Budget
+const showBudgetModal = ref(false)
+const budgetInput = ref(0)
+
+// Add member
+const showAddMemberModal = ref(false)
+const newMemberName = ref('')
+
 // Action sheet / Delete / Remove member
 const showActionSheet = ref(false)
 const actionSheetHeader = ref('')
@@ -495,8 +540,52 @@ function formatShortDate(dateStr: string) {
 
 function toggleMember(userId: string) {
   const idx = selectedMembers.value.indexOf(userId)
-  if (idx >= 0) selectedMembers.value.splice(idx, 1)
-  else selectedMembers.value.push(userId)
+  if (idx >= 0) {
+    selectedMembers.value.splice(idx, 1)
+    delete customAmounts[userId]
+  } else {
+    selectedMembers.value.push(userId)
+    if (expenseAmount.value && selectedMembers.value.length) {
+      const perPerson = Math.round(expenseAmount.value / selectedMembers.value.length)
+      selectedMembers.value.forEach(uid => { customAmounts[uid] = perPerson })
+    } else {
+      customAmounts[userId] = 0
+    }
+  }
+}
+
+function openBudgetModal() {
+  budgetInput.value = trip.value?.budget || 0
+  showBudgetModal.value = true
+}
+
+function saveBudget() {
+  store.updateTripBudget(tripId.value, budgetInput.value || undefined)
+  showBudgetModal.value = false
+}
+
+function clearBudget() {
+  store.updateTripBudget(tripId.value, undefined)
+  showBudgetModal.value = false
+}
+
+function saveNewMember() {
+  const name = newMemberName.value.trim()
+  if (!name) return
+  store.addMember(tripId.value, name)
+  newMemberName.value = ''
+  showAddMemberModal.value = false
+}
+
+function onCustomInput(userId: string, event: Event) {
+  const val = Number((event.target as HTMLInputElement).value || 0)
+  customAmounts[userId] = val
+}
+
+function distributeEqual() {
+  if (!selectedMembers.value.length || !expenseAmount.value) return
+  const perPerson = Math.round(expenseAmount.value / selectedMembers.value.length)
+  selectedMembers.value.forEach(uid => { customAmounts[uid] = perPerson })
 }
 
 function confirmRemoveMember(userId: string) {
@@ -550,14 +639,16 @@ function confirmDelete(action: () => void) {
 function openEditExpense(exp: Expense) {
   editingExpenseId.value = exp.id; expenseTitle.value = exp.title; expenseAmount.value = exp.amount
   expenseCategory.value = exp.category; expenseType.value = exp.type
-  if (exp.type === 'personal') { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
-  else if (exp.splitMode === 'selected') { expenseSplitMode.value = 'equal_selected'; selectedMembers.value = exp.splits.map(s => s.userId) }
-  else if (exp.splitMode === 'custom' || exp.splitMode === 'itemized') {
-    expenseSplitMode.value = 'custom'; selectedMembers.value = []
-    Object.keys(customAmounts).forEach(k => delete customAmounts[k])
+  Object.keys(customAmounts).forEach(k => delete customAmounts[k])
+  if (exp.type === 'personal') {
+    expenseSplitMode.value = 'equal_all'; selectedMembers.value = []
+  } else if (exp.splitMode === 'equal' && exp.splits.length === activeMembers.value.length) {
+    expenseSplitMode.value = 'equal_all'; selectedMembers.value = []
+  } else {
+    expenseSplitMode.value = 'select'
+    selectedMembers.value = exp.splits.map(s => s.userId)
     exp.splits.forEach(s => { customAmounts[s.userId] = s.amount })
-    activeMembers.value.forEach(m => { if (!(m.userId in customAmounts)) customAmounts[m.userId] = 0 })
-  } else { expenseSplitMode.value = 'equal_all'; selectedMembers.value = [] }
+  }
   showExpenseModal.value = true
 }
 function openEditEvent(evt: { id: string; title: string; date: string; time: string; location?: string }) {
@@ -578,9 +669,8 @@ function sendMessage() {
 function openAddExpense() {
   showActions.value = false; editingExpenseId.value = null; expenseTitle.value = ''; expenseAmount.value = 0
   expenseCategory.value = 'food'; expenseType.value = 'shared'; expenseSplitMode.value = 'equal_all'
-  selectedMembers.value = activeMembers.value.map(m => m.userId)
+  selectedMembers.value = []
   Object.keys(customAmounts).forEach(k => delete customAmounts[k])
-  activeMembers.value.forEach(m => { customAmounts[m.userId] = 0 })
   showExpenseModal.value = true
 }
 function openAddEvent() { showActions.value = false; editingEventId.value = null; eventTitle.value = ''; eventDate.value = ''; eventTime.value = ''; eventLocation.value = ''; showEventModal.value = true }
@@ -593,13 +683,25 @@ function saveExpense() {
   const members = activeMembers.value
   const isPersonal = expenseType.value === 'personal'
   let splits: { userId: string; amount: number }[]; let splitMode: 'equal' | 'selected' | 'custom' = 'equal'
-  if (isPersonal) { splits = [{ userId: currentUserId.value, amount: expenseAmount.value }] }
-  else if (expenseSplitMode.value === 'equal_selected') {
-    splitMode = 'selected'; const sel = selectedMembers.value.length > 0 ? selectedMembers.value : members.map(m => m.userId)
-    splits = sel.map(uid => ({ userId: uid, amount: Math.round(expenseAmount.value / sel.length) }))
-  } else if (expenseSplitMode.value === 'custom') {
-    splitMode = 'custom'; splits = members.filter(m => (customAmounts[m.userId] || 0) > 0).map(m => ({ userId: m.userId, amount: customAmounts[m.userId] }))
-  } else { splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) })) }
+
+  if (isPersonal) {
+    splits = [{ userId: currentUserId.value, amount: expenseAmount.value }]
+  } else if (expenseSplitMode.value === 'select') {
+    const sel = selectedMembers.value.length > 0 ? selectedMembers.value : members.map(m => m.userId)
+    const allEqual = sel.every(uid => customAmounts[uid] === customAmounts[sel[0]])
+    const perPerson = Math.round(expenseAmount.value / sel.length)
+    const allEqualToAvg = sel.every(uid => (customAmounts[uid] || 0) === perPerson)
+
+    if (allEqual || allEqualToAvg) {
+      splitMode = sel.length === members.length ? 'equal' : 'selected'
+      splits = sel.map(uid => ({ userId: uid, amount: perPerson }))
+    } else {
+      splitMode = 'custom'
+      splits = sel.filter(uid => (customAmounts[uid] || 0) > 0).map(uid => ({ userId: uid, amount: customAmounts[uid] || 0 }))
+    }
+  } else {
+    splits = members.map(m => ({ userId: m.userId, amount: Math.round(expenseAmount.value / members.length) }))
+  }
 
   if (editingExpenseId.value) {
     store.updateExpense(editingExpenseId.value, { title: expenseTitle.value, amount: expenseAmount.value, category: expenseCategory.value as any, type: expenseType.value as any, splitMode, splits })
@@ -706,8 +808,20 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 
 .split-segment { margin: 8px 0; }
 .participants-list { margin: 8px 0; }
-.participant-item { --min-height: 44px; }
-.custom-amounts { margin: 8px 0; }
+.split-member-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; min-height: 44px;
+}
+.split-member-name { flex: 1; font-size: 15px; font-weight: 500; color: #1F2937; }
+.split-member-off { opacity: 0.45; }
+.split-amount-box { display: flex; align-items: center; gap: 2px; }
+.split-amount-input {
+  width: 80px; text-align: right; border: 1px solid #D1D5DB; border-radius: 8px;
+  padding: 6px 8px; font-size: 15px; font-weight: 600; color: var(--ion-color-primary);
+  background: #F9FAFB; outline: none;
+}
+.split-amount-input:focus { border-color: var(--ion-color-primary); background: white; }
+.split-amount-currency { font-size: 13px; color: #9CA3AF; }
 .split-preview { padding: 8px 16px; font-size: 13px; color: var(--ion-color-primary); font-weight: 600; }
 .split-hint { padding: 8px 16px; font-size: 13px; color: #9CA3AF; }
 .split-error { color: var(--ion-color-danger); }

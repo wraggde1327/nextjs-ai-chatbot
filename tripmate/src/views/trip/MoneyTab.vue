@@ -16,7 +16,7 @@
     <ion-content class="ion-padding">
       <!-- Shared expenses -->
       <template v-if="tab === 'shared'">
-        <div class="stat-card">
+        <div class="stat-card" @click="openBudgetModal" style="cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div class="stat-label">Общие траты</div>
@@ -33,8 +33,11 @@
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;color:#6B7280">
               <span>{{ budgetPct }}% бюджета</span>
-              <span>Осталось: {{ (trip.budget - totalShared).toLocaleString() }} ₽</span>
+              <span>Бюджет: {{ trip.budget.toLocaleString() }} ₽</span>
             </div>
+          </div>
+          <div v-else style="margin-top:8px;text-align:center;font-size:13px;color:var(--ion-color-primary)">
+            + Установить бюджет
           </div>
         </div>
 
@@ -153,7 +156,7 @@
 
           <div class="section-header">Взносы</div>
           <ion-list>
-            <ion-item v-for="c in tripFund.contributions" :key="c.userId">
+            <ion-item v-for="c in tripFund.contributions" :key="c.userId" button @click="openContributionAction(c)">
               <ion-label>
                 <h3>{{ store.getUserName(c.userId) }}</h3>
                 <p>{{ c.paidAmount.toLocaleString() }} / {{ c.expectedAmount.toLocaleString() }} ₽</p>
@@ -166,16 +169,9 @@
         </template>
         <div v-else class="empty-state">
           <p>Общий фонд не создан</p>
-          <ion-button @click="showFundAlert = true">Создать фонд</ion-button>
+          <p style="font-size:13px;margin-bottom:16px">Все скидываются определённую сумму на общие расходы</p>
+          <ion-button @click="showCreateFundModal = true">Создать фонд</ion-button>
         </div>
-
-        <ion-alert
-          :is-open="showFundAlert"
-          header="Создание фонда"
-          message="Создание общего фонда будет доступно в следующей версии."
-          :buttons="['OK']"
-          @did-dismiss="showFundAlert = false"
-        />
       </template>
     </ion-content>
 
@@ -216,6 +212,45 @@
       :buttons="deleteAlertButtons"
       @did-dismiss="showDeleteAlert = false"
     />
+
+    <!-- Budget Modal -->
+    <ion-modal :is-open="showBudgetModal" @did-dismiss="showBudgetModal = false" :initial-breakpoint="0.35" :breakpoints="[0, 0.35]">
+      <ion-header><ion-toolbar>
+        <ion-title>Бюджет</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveBudget" strong>Сохранить</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input v-model.number="budgetInput" label="Общий бюджет (₽)" label-placement="floating" type="number" inputmode="numeric" placeholder="0" />
+        </ion-item>
+        <p style="font-size:13px;color:#6B7280;padding:8px 16px">На человека: ~{{ budgetInput && memberCount ? Math.round(budgetInput / memberCount).toLocaleString() : '0' }} ₽</p>
+        <ion-button v-if="trip?.budget" fill="clear" color="danger" expand="block" @click="clearBudget">Убрать бюджет</ion-button>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Create Fund Modal -->
+    <ion-modal :is-open="showCreateFundModal" @did-dismiss="showCreateFundModal = false" :initial-breakpoint="0.4" :breakpoints="[0, 0.4]">
+      <ion-header><ion-toolbar>
+        <ion-title>Создать фонд</ion-title>
+        <ion-buttons slot="end"><ion-button @click="createFund" :disabled="!fundAmountInput" strong>Создать</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input v-model.number="fundAmountInput" label="Сумма с человека (₽)" label-placement="floating" type="number" inputmode="numeric" placeholder="20000" />
+        </ion-item>
+        <p style="font-size:13px;color:#6B7280;padding:8px 16px">
+          {{ memberCount }} участников · Итого: {{ (fundAmountInput * memberCount).toLocaleString() }} ₽
+        </p>
+      </ion-content>
+    </ion-modal>
+
+    <!-- Contribution Action Sheet -->
+    <ion-action-sheet
+      :is-open="showContribSheet"
+      :header="contribSheetHeader"
+      :buttons="contribSheetButtons"
+      @did-dismiss="showContribSheet = false"
+    />
   </ion-page>
 </template>
 
@@ -225,7 +260,7 @@ import { useRoute } from 'vue-router'
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSegment, IonSegmentButton,
   IonList, IonItem, IonLabel, IonBadge, IonNote, IonIcon, IonButton, IonButtons,
-  IonAlert, IonModal, IonInput, IonSelect, IonSelectOption,
+  IonAlert, IonModal, IonInput, IonSelect, IonSelectOption, IonActionSheet,
   IonItemSliding, IonItemOptions, IonItemOption,
 } from '@ionic/vue'
 import { lockClosedOutline } from 'ionicons/icons'
@@ -237,7 +272,19 @@ const route = useRoute()
 const store = useTripsStore()
 const auth = useAuthStore()
 const tab = ref('shared')
-const showFundAlert = ref(false)
+
+// Budget
+const showBudgetModal = ref(false)
+const budgetInput = ref(0)
+
+// Fund creation
+const showCreateFundModal = ref(false)
+const fundAmountInput = ref(20000)
+
+// Contribution action
+const showContribSheet = ref(false)
+const contribSheetHeader = ref('')
+const contribSheetButtons = ref<any[]>([])
 
 const tripId = computed(() => route.params.tripId as string)
 const trip = computed(() => store.trips.find(t => t.id === tripId.value))
@@ -350,6 +397,45 @@ function contributionStatusText(s: string) {
   if (s === 'confirmed') return '✅ Подтверждён'
   if (s === 'paid') return '⏳ Ожидает'
   return 'Не внёс'
+}
+
+function openBudgetModal() {
+  budgetInput.value = trip.value?.budget || 0
+  showBudgetModal.value = true
+}
+
+function saveBudget() {
+  store.updateTripBudget(tripId.value, budgetInput.value || undefined)
+  showBudgetModal.value = false
+}
+
+function clearBudget() {
+  store.updateTripBudget(tripId.value, undefined)
+  showBudgetModal.value = false
+}
+
+function createFund() {
+  if (!fundAmountInput.value) return
+  store.createFund(tripId.value, fundAmountInput.value, auth.user?.id ?? '')
+  showCreateFundModal.value = false
+}
+
+function openContributionAction(c: { userId: string; status: string; paidAmount: number; expectedAmount: number }) {
+  const name = store.getUserName(c.userId)
+  contribSheetHeader.value = `${name} — ${c.paidAmount.toLocaleString()} / ${c.expectedAmount.toLocaleString()} ₽`
+  const buttons: any[] = []
+  if (c.status !== 'confirmed') {
+    buttons.push({ text: '✅ Подтвердить оплату', handler: () => store.updateContribution(tripId.value, c.userId, 'confirmed') })
+  }
+  if (c.status !== 'paid') {
+    buttons.push({ text: '💳 Отметить как оплачено', handler: () => store.updateContribution(tripId.value, c.userId, 'paid') })
+  }
+  if (c.status !== 'pending') {
+    buttons.push({ text: '↩️ Сбросить статус', handler: () => store.updateContribution(tripId.value, c.userId, 'pending') })
+  }
+  buttons.push({ text: 'Отмена', role: 'cancel' })
+  contribSheetButtons.value = buttons
+  showContribSheet.value = true
 }
 
 function formatDate(dateStr: string) {

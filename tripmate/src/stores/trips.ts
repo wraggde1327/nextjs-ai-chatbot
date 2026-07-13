@@ -216,6 +216,63 @@ export const useTripsStore = defineStore('trips', () => {
     return link
   }
 
+  // ===== TRIP MANAGEMENT =====
+
+  function updateTripBudget(tripId: string, budget: number | undefined) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (trip) trip.budget = budget
+  }
+
+  function addMember(tripId: string, name: string, role: 'organizer' | 'member' = 'member') {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return
+    const userId = `user-${Date.now()}`
+    mockUsers[userId] = { id: userId, name, avatar: '', defaultCurrency: '₽', defaultReminderMinutes: 30 }
+    trip.members.push({ userId, role, joinedAt: new Date().toISOString().split('T')[0] })
+    messages.value.push({
+      id: `msg-${Date.now()}`, tripId, type: 'system',
+      text: `${name} присоединился(ась) к поездке`,
+      createdBy: userId, createdAt: new Date().toISOString(),
+    })
+    return userId
+  }
+
+  function createFund(tripId: string, amountPerPerson: number, holderId: string) {
+    const activeM = getActiveMembers(tripId)
+    fund.value = {
+      id: `fund-${Date.now()}`,
+      tripId,
+      holderId,
+      contributions: activeM.map(m => ({
+        userId: m.userId,
+        expectedAmount: amountPerPerson,
+        paidAmount: m.userId === holderId ? amountPerPerson : 0,
+        status: m.userId === holderId ? 'confirmed' as const : 'pending' as const,
+      })),
+      totalCollected: amountPerPerson,
+      totalSpent: 0,
+    }
+    messages.value.push({
+      id: `msg-${Date.now()}`, tripId, type: 'system',
+      text: `🏦 Создан общий фонд: по ${amountPerPerson.toLocaleString()} ₽ с человека`,
+      createdBy: holderId, createdAt: new Date().toISOString(),
+    })
+  }
+
+  function updateContribution(tripId: string, userId: string, status: 'pending' | 'paid' | 'confirmed') {
+    if (!fund.value || fund.value.tripId !== tripId) return
+    const c = fund.value.contributions.find(x => x.userId === userId)
+    if (!c) return
+    const prevPaid = c.paidAmount
+    if (status === 'paid' || status === 'confirmed') {
+      c.paidAmount = c.expectedAmount
+    } else {
+      c.paidAmount = 0
+    }
+    c.status = status
+    fund.value.totalCollected += (c.paidAmount - prevPaid)
+  }
+
   // ===== UPDATE =====
 
   function toggleTask(taskId: string, userId: string) {
@@ -282,7 +339,8 @@ export const useTripsStore = defineStore('trips', () => {
     trips, expenses, messages, events, tasks, polls, links, fund,
     activeTrips, archivedTrips,
     getUserName, getActiveMembers, getLeftMembers, getWalletForUser,
-    removeMember, restoreMember,
+    removeMember, restoreMember, addMember,
+    updateTripBudget, createFund, updateContribution,
     getTripExpenses, getSharedExpenses, getPersonalExpenses, getDeposits,
     getTripMessages, getTripEvents, getUpcomingEvents, getEventsForDate,
     getTripTasks, getTaskSections, getTripPolls, getTripLinks, getTripFund,
