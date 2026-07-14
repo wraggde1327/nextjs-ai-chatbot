@@ -397,6 +397,27 @@
             </ion-button>
           </ion-item>
         </ion-list>
+        <!-- Wallets -->
+        <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Связи (кошельки)</span>
+          <ion-button fill="clear" size="small" @click="openCreateWallet">
+            <ion-icon :icon="addOutline" />
+          </ion-button>
+        </div>
+        <div v-if="tripWallets.length" class="wallets-list">
+          <div v-for="w in tripWallets" :key="w.id" class="wallet-row">
+            <ion-icon :icon="peopleOutline" class="wallet-row-icon" />
+            <div class="wallet-row-info">
+              <div class="wallet-row-name">{{ w.name || 'Без названия' }}</div>
+              <div class="wallet-row-members">{{ w.memberIds.map(uid => store.getUserName(uid)).join(', ') }}</div>
+            </div>
+            <ion-button fill="clear" size="small" color="medium" @click="confirmDeleteWallet(w.id, w.name)">
+              <ion-icon :icon="closeOutline" />
+            </ion-button>
+          </div>
+        </div>
+        <div v-else class="wallet-empty">Нет связей. Объедините участников в пару или семью.</div>
+
         <template v-if="leftMembers.length">
           <div class="section-header">Вышли</div>
           <ion-list>
@@ -412,6 +433,25 @@
             </ion-item>
           </ion-list>
         </template>
+      </ion-content>
+    </ion-modal>
+
+    <!-- ========== Create Wallet Modal ========== -->
+    <ion-modal :is-open="showWalletModal" @did-dismiss="showWalletModal = false">
+      <ion-header><ion-toolbar>
+        <ion-buttons slot="start"><ion-button @click="showWalletModal = false">Отмена</ion-button></ion-buttons>
+        <ion-title>Новая связь</ion-title>
+        <ion-buttons slot="end"><ion-button @click="saveWallet" :disabled="walletSelectedIds.length < 2" strong>Создать</ion-button></ion-buttons>
+      </ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <ion-item><ion-input v-model="walletName_" label="Название" label-placement="floating" placeholder="Семья, пара..." /></ion-item>
+        <div class="section-header">Выберите участников (мин. 2)</div>
+        <div class="participants-list">
+          <div v-for="m in activeMembers" :key="m.userId" class="split-member-row" @click="toggleWalletMember(m.userId)">
+            <ion-checkbox :checked="walletSelectedIds.includes(m.userId)" />
+            <span class="split-member-name">{{ store.getUserName(m.userId) }}</span>
+          </div>
+        </div>
       </ion-content>
     </ion-modal>
 
@@ -543,6 +583,11 @@ const taskTitle = ref('')
 const taskSection = ref('До поездки')
 const taskAssignee = ref('')
 
+const showWalletModal = ref(false)
+const walletName_ = ref('')
+const walletSelectedIds = ref<string[]>([])
+const tripWallets = computed(() => store.getTripWallets(tripId.value))
+
 const showActionSheet = ref(false)
 const actionSheetHeader = ref('')
 const actionSheetButtons = ref<any[]>([])
@@ -637,6 +682,10 @@ function openBudgetModal() { budgetInput.value = trip.value?.budget || 0; showBu
 function saveBudget() { store.updateTripBudget(tripId.value, budgetInput.value || undefined); showBudgetModal.value = false }
 function clearBudget() { store.updateTripBudget(tripId.value, undefined); showBudgetModal.value = false }
 function saveNewMember() { const name = newMemberName.value.trim(); if (!name) return; store.addMember(tripId.value, name); newMemberName.value = ''; showAddMemberModal.value = false }
+function openCreateWallet() { walletName_.value = ''; walletSelectedIds.value = []; showWalletModal.value = true }
+function toggleWalletMember(userId: string) { const idx = walletSelectedIds.value.indexOf(userId); if (idx >= 0) walletSelectedIds.value.splice(idx, 1); else walletSelectedIds.value.push(userId) }
+function saveWallet() { if (walletSelectedIds.value.length < 2) return; store.createWallet(tripId.value, walletName_.value.trim() || undefined as any, walletSelectedIds.value); showWalletModal.value = false }
+function confirmDeleteWallet(walletId: string, name?: string) { deleteConfirmButtons.value = [{ text: 'Отмена', role: 'cancel' }, { text: 'Удалить', role: 'destructive', handler: () => store.deleteWallet(tripId.value, walletId) }]; showDeleteConfirm.value = true }
 function onCustomInput(userId: string, event: Event) { customAmounts[userId] = Number((event.target as HTMLInputElement).value || 0) }
 function distributeEqual() { if (!selectedMembers.value.length || !expenseAmount.value) return; const pp = Math.round(expenseAmount.value / selectedMembers.value.length); selectedMembers.value.forEach(uid => { customAmounts[uid] = pp }) }
 
@@ -821,6 +870,13 @@ watch(chatMessages, () => scrollToBottom(), { deep: true })
 .split-hint { padding: 8px 16px; font-size: 12px; color: var(--color-text-3); }
 .split-error { color: var(--color-danger); }
 
+.wallets-list { padding: 0 0 8px; }
+.wallet-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--color-border); }
+.wallet-row-icon { font-size: 18px; color: var(--color-accent); flex-shrink: 0; }
+.wallet-row-info { flex: 1; }
+.wallet-row-name { font-size: 15px; font-weight: 700; color: var(--color-text-1); }
+.wallet-row-members { font-size: 12px; color: var(--color-text-2); margin-top: 1px; }
+.wallet-empty { padding: 12px 4px; font-size: 13px; color: var(--color-text-3); }
 .member-avatar { --border-radius: 50%; width: 32px; height: 32px; }
 .avatar-letter { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-accent); color: white; font-weight: 700; font-size: 14px; border-radius: 50%; }
 .left-member { opacity: 0.5; }

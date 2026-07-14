@@ -69,6 +69,28 @@ export const useTripsStore = defineStore('trips', () => {
     return trip.wallets.find(w => w.memberIds.includes(userId) && w.memberIds.length > 1) ?? null
   }
 
+  function getTripWallets(tripId: string) {
+    const trip = trips.value.find(t => t.id === tripId)
+    return trip?.wallets.filter(w => w.memberIds.length > 1) ?? []
+  }
+
+  function createWallet(tripId: string, name: string, memberIds: string[]) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip || memberIds.length < 2) return
+    memberIds.forEach(uid => {
+      const existing = trip.wallets.findIndex(w => w.memberIds.includes(uid) && w.memberIds.length > 1)
+      if (existing >= 0) trip.wallets.splice(existing, 1)
+    })
+    trip.wallets.push({ id: `wallet-${Date.now()}`, tripId, name, memberIds })
+  }
+
+  function deleteWallet(tripId: string, walletId: string) {
+    const trip = trips.value.find(t => t.id === tripId)
+    if (!trip) return
+    const idx = trip.wallets.findIndex(w => w.id === walletId)
+    if (idx >= 0) trip.wallets.splice(idx, 1)
+  }
+
   // ===== QUERIES =====
 
   function getTripExpenses(tripId: string) {
@@ -344,7 +366,7 @@ export const useTripsStore = defineStore('trips', () => {
   return {
     trips, expenses, messages, events, tasks, polls, links, fund,
     activeTrips, archivedTrips,
-    getUserName, getActiveMembers, getLeftMembers, getWalletForUser,
+    getUserName, getActiveMembers, getLeftMembers, getWalletForUser, getTripWallets, createWallet, deleteWallet,
     removeMember, restoreMember, addMember,
     updateTripBudget, createFund, updateContribution, spendFromFund,
     getTripExpenses, getSharedExpenses, getPersonalExpenses, getDeposits,
